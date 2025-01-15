@@ -1,10 +1,62 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- <link rel="icon" type="image/svg+xml" href="/vite.svg" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <title>TSL Editor</title>
+    <style>
+      :root {
+        font-family: "Inter", sans-serif;
+
+        --font-size-hero: 5em;
+        --font-size-xl: 4em;
+        --font-size-lg: 3em;
+        --font-size-md: 2em;
+        --font-size-sm: 1.2em;
+        --font-size-xs: 1em;
+        --font-size-xxs: 0.8em;
+
+        --dark-contrast-background: #12141c;
+        --dark-background: #1c1e2a;
+        --panel-background: #242736;
+        --light-background: #fff;
+        --neutral-background: #f4f4f4;
+        --border-color: #34384e;
+        --connection-color: #424763;
+        --accent-color: #1e62ff;
+        --accent-color-subtle: rgba(30, 98, 255, 0.8);
+        --text-light-color: #fff;
+        --text-neutral-color: #7b7e8c;
+        --text-dark-color: #000;
+
+        --system-red: #ff4444;
+        --system-yellow: #ffdd00;
+
+        /* Tweakpane Theme */
+        --tp-base-background-color: var(--panel-background);
+        --tp-base-shadow-color: rgba(0, 0, 0, 0);
+        --tp-button-background-color: var(--panel-background);
+        --tp-button-background-color-active: var(--accent-color);
+        --tp-button-background-color-focus: var(--panel-background);
+        --tp-button-background-color-hover: var(--connection-color);
+        --tp-button-foreground-color: var(--text-light-color);
+        --tp-container-background-color: var(--dark-background);
+        --tp-container-background-color-active: var(--panel-background);
+        --tp-container-background-color-focus: var(--connection-color);
+        --tp-container-background-color-hover: var(--border-color);
+        --tp-container-foreground-color: var(--text-neutral-color);
+        --tp-groove-foreground-color: var(--border-color);
+        --tp-input-background-color: var(--dark-background);
+        --tp-input-background-color-active: var(--panel-background);
+        --tp-input-background-color-focus: var(--connection-color);
+        --tp-input-background-color-hover: var(--border-color);
+        --tp-input-foreground-color: var(--text-light-color);
+        --tp-label-foreground-color: var(--text-light-color);
+        --tp-monitor-background-color: var(--dark-background);
+        --tp-monitor-foreground-color: var(--text-neutral-color);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

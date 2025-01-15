@@ -1,26 +1,35 @@
 {
-  "name": "tsl-editor",
+  "name": "three-tsl",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
     "@nodl/core": "^1.0.9",
     "@nodl/react": "^1.0.4",
+    "@react-three/fiber": "^8.17.10",
     "@types/three": "^0.170.0",
+    "color": "^4.2.3",
+    "highlight.js": "^11.11.1",
+    "leva": "^0.9.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rxjs": "^7.8.1",
     "three": "^0.171.0",
-    "zod": "^3.23.8"
+    "tweakpane": "^4.0.5",
+    "uuid": "^11.0.4",
+    "zod": "^3.21.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
+    "@tweakpane/core": "^2.0.5",
+    "@types/color": "^4.2.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

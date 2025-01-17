@@ -1,8 +1,10 @@
 import { Input, Output, schema, Node } from "../nodl-core";
 import { z } from "zod";
 import { vec2, vec3, vec4, float, int, uint, bool, color } from "three/tsl";
+
 import { combineLatest, map } from "rxjs";
 import { createVarNameForNode } from "./utils";
+
 
 export class Float extends Node {
   name = "Float";

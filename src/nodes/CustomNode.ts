@@ -1,14 +1,14 @@
 import * as esprima from "esprima";
 import { Input, Node, Output, schema } from "../nodl-core";
 import { z } from "zod";
-import { combineLatest, map } from "rxjs";
+import { combineLatest, map, of } from "rxjs";
 import * as TSL from "three/tsl";
 
-const tslIdentifiers = Object.keys(TSL);
-const tslMethods = tslIdentifiers.map((identifier) => {
-  //@ts-expect-error
-  return TSL[identifier];
-});
+// const tslIdentifiers = Object.keys(TSL);
+// const tslMethods = tslIdentifiers.map((identifier) => {
+//   //@ts-expect-error
+//   return TSL[identifier];
+// });
 
 // console.log(tslIdentifiers);
 // console.log(tslMethods);
@@ -16,8 +16,7 @@ const tslMethods = tslIdentifiers.map((identifier) => {
 export const createCustomNode = (tslCode: string, name?: string) => {
   const tslVm = new TSLVm(tslCode);
 
-  console.log(tslVm.ast.body[0].expression.arguments[0].params[0].elements);
-  const inputs = tslVm.ast.body[0].expression.arguments[0].params[0].elements;
+  const inputs = tslVm.ast.body[0]?.expression?.arguments[0]?.params?.[0]?.elements || [];
   const nodeInputs: Record<string, Input<any>> = {};
 
   inputs.forEach((input) => {
@@ -39,11 +38,11 @@ export const createCustomNode = (tslCode: string, name?: string) => {
         value: new Output({
           name: "Value",
           type: schema(z.any()),
-          observable: combineLatest([...Object.values(this.inputs)]).pipe(
+          observable: Object.values(this.inputs).length > 0 ? combineLatest([...Object.values(this.inputs)]).pipe(
             map((inputs) => {
               return () => tslVm.run(inputs.map((i) => i()));
-            })
-          ),
+            }) 
+          ) : of(tslVm.run),
         }),
       };
 
@@ -105,7 +104,7 @@ Fn(( [ uv, skew ] ) => {
 
 class TSLVm {
   private tslIdentifiers = Object.keys(TSL);
-  private tslMethods = tslIdentifiers.map((identifier) => {
+  private tslMethods = this.tslIdentifiers.map((identifier) => {
     //@ts-expect-error
     return TSL[identifier];
   });
@@ -130,31 +129,20 @@ class TSLVm {
   private validateAST(node, allowedMethods) {
     switch (node.type) {
       case "Program":
-        console.log({ Program: node });
         node.body.forEach((statement) =>
           this.validateAST(statement, allowedMethods)
         );
         break;
       case "ExpressionStatement":
-        console.log({ ExpressionStatement: node });
         this.validateAST(node.expression, allowedMethods);
         break;
       case "CallExpression":
-        console.log({ CallExpression: node.callee, args: node.arguments });
         if (
           node.callee.type === "Identifier" &&
           !allowedMethods.has(node.callee.name)
         ) {
           throw new Error(`Disallowed function call: ${node.callee.name}`);
         }
-        // if (node.callee.type === 'MemberExpression') {
-        //   const methodName = node.callee.property.name;
-        //   console.log({methodName}, ">>>>>>>>>>>>>>>>>>>>>>>>>");
-
-        // //   if (!allowedMethods.has(methodName)) {
-        // //     throw new Error(`Disallowed method call: ${methodName}`);
-        // //   }
-        // }
         node.arguments.forEach((arg) => this.validateAST(arg, allowedMethods));
         break;
       case "Identifier":
@@ -170,17 +158,11 @@ class TSLVm {
         this.validateAST(node.property, allowedMethods);
         break;
       case "FunctionExpression":
-        console.log({
-          FunctionExpression: node,
-          args: node.params,
-          body: node.body,
-        });
         node.params.forEach((param) => this.validateAST(param, allowedMethods));
         this.validateAST(node.body, allowedMethods);
         break;
       case "ReturnStatement":
         if (node.argument) {
-          console.log({ ReturnStatement: node, argument: node.argument });
           this.validateAST(node.argument, allowedMethods);
         }
         break;
@@ -214,7 +196,7 @@ class TSLVm {
     return `Fn(${match[1]})`;
   }
 
-  public run(args?: any[]) {
+  public run = (args?: any[]) => {
     var userFunction = new Function(
       ...this.tslIdentifiers,
       this.userCodeStrict

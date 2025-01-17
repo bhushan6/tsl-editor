@@ -36,38 +36,8 @@ import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import "highlight.js/styles/atom-one-dark.css";
 import { createCustomNode } from "./nodes/CustomNode";
-import { set } from "zod";
+
 hljs.registerLanguage("javascript", javascript);
-
-const tslString = `Fn( ( [ uv, multiplier, rotation, offset ] ) => {
-
-					const centeredUv = uv.sub( 0.5 ).toVar();
-					const distanceToCenter = centeredUv.length();
-					const angle = atan( centeredUv.y );
-					const radialUv = vec2( angle.add( PI ).div( PI2 ), distanceToCenter ).toVar();
-					radialUv.mulAssign( multiplier );
-					radialUv.x.addAssign( rotation );
-					radialUv.y.addAssign( offset );
-
-					return radialUv;
-
-				} ); `;
-
-// const t2 = `
-// wtf
-// asd,mna
-// Fn(( [ count ] ) => {
-
-// 					let gridUv = screenCoordinate.xy.div( screenSize.yy ).mul( count );
-// 					gridUv = rotate( gridUv, Math.PI * 0.25 ).mod( 1 );
-
-//           return gridUv;
-
-// 				})();
-//                 asda
-// `;
-
-// // console.log(createCustomNode(tslString));
 
 const CustomNodes: { [key: string]: Node } = {
 
@@ -679,17 +649,17 @@ function App() {
     };
   }, []);
 
-  const codeBlockRef = useRef<HTMLDivElement>(null);
+  // const codeBlockRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!codeBlockRef.current) return;
-    codeBlockRef.current.childNodes.forEach((child) => {
-      if (child instanceof HTMLElement) {
-        hljs.highlightElement(child);
-      }
-    });
-    // hljs.highlightElement(codeBlockRef.current);
-  }, [hljs]);
+  // useEffect(() => {
+  //   if (!codeBlockRef.current) return;
+  //   codeBlockRef.current.childNodes.forEach((child) => {
+  //     if (child instanceof HTMLElement) {
+  //       hljs.highlightElement(child);
+  //     }
+  //   });
+  //   // hljs.highlightElement(codeBlockRef.current);
+  // }, [hljs]);
 
   // // const codeBlocks = [
   // //   `const {(texture, uniform, vec2, vec4, uv, oscSine, time, grayscale)} =
@@ -701,7 +671,7 @@ function App() {
   // //   `const scaledTime = time.mul( .5 ); // .5 is speed`,
   // // ];
 
-  const [customNodeForm, setCustomNodeForm] = useState(true)
+  const [customNodeForm, setCustomNodeForm] = useState(false)
 
   const nameInputRef = useRef<HTMLInputElement>(null);
   const nodeCodeInputRef = useRef<HTMLTextAreaElement>(null);
@@ -867,3 +837,4 @@ function App() {
 }
 
 export default App;
+

@@ -37,7 +37,7 @@ import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import "highlight.js/styles/atom-one-dark.css";
 import { createCustomNode } from "./nodes/CustomNode";
-import { Fn } from "three/tsl";
+import { ConstantColorFactor, Fn } from "three/tsl";
 import { UtilityNodes } from "./nodes/UtilityNodes";
 import { VaryingNode } from "./nodes/VaryingNode";
 
@@ -288,13 +288,19 @@ const MeshStandardMaterialUI = ({
   }, []);
 
   useEffect(() => {
-    const sub3 = node.inputs.BaseColor.subscribe((value) => {
+    const colorNodeSubs = node.inputs.colorNode.subscribe((value) => {
       const colorNode = Fn(value)
-      experienceRef.current?.defaultBox(colorNode);
+      experienceRef.current?.updateNode("colorNode", colorNode);
+    });
+
+    const positionNodeSubs = node.inputs.positionNode.subscribe((value) => {
+      const positionNode = Fn(value)
+      experienceRef.current?.updateNode("positionNode", positionNode);
     });
 
     return () => {
-      sub3.unsubscribe();
+      colorNodeSubs.unsubscribe();
+      positionNodeSubs.unsubscribe();
     };
   }, []);
 
@@ -357,7 +363,7 @@ const MeshStandardMaterialUI = ({
         });
       };
 
-      pushNodeToTree(node, tree[node.id], "BaseColor");
+      pushNodeToTree(node, tree[node.id], "colorNode");
 
       const traverseTree = (
         rootNode: TreeNodeType,

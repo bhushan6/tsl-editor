@@ -1,20 +1,27 @@
 import { Input, schema, Node } from "../nodl-core";
 import { z } from "zod";
 
-import { vec4 } from "three/tsl";
+import { positionLocal, vec4 } from "three/tsl";
 
 export class MeshStandardMaterialNode extends Node {
   name = "Mesh Standard Material";
   inputs = {
-    BaseColor: new Input({
-      name: "Base Color",
+    colorNode: new Input({
+      name: "colorNode",
       type: schema(z.any()),
       defaultValue: () => vec4(1, 0, 0, 1),
     }),
+    positionNode: new Input({
+      name: "positionNode",
+      type: schema(z.any()),
+      defaultValue: () => positionLocal,
+    })
   };
+
   outputs = {};
+
   public code = (args: string[]) => {
-    const argsString = !this.inputs.BaseColor.connected
+    const argsString = !this.inputs.colorNode.connected
       ? `vec4(1, 0, 0, 1)`
       : args.join(", ");
     return {

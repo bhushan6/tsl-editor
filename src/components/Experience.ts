@@ -9,6 +9,11 @@ export class Experience {
   private _renderer: THREE.WebGPURenderer;
   private _controls: OrbitControls;
   private _size: { width: number; height: number } | null = null;
+
+  private _box: THREE.Mesh | null = null;
+
+  private _boxMaterial: THREE.MeshStandardNodeMaterial | null = null;
+
   constructor(
     canvas: HTMLCanvasElement,
     size?: { width: number; height: number }
@@ -68,24 +73,7 @@ export class Experience {
     const directionalLight4 = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight4.position.set(0, 5, -5);
     this._scene.add(directionalLight4);
-  }
-  private _box: THREE.Mesh | null = null;
-  public defaultBox = (colorNode: () => THREE.Node) => {
-    if (this._box) {
-      //@ts-expect-error
-      this._box.material?.dispose();
-      const boxMaterial = new THREE.MeshStandardNodeMaterial({
-        transparent: false,
-        side: THREE.FrontSide,
-      });
-      boxMaterial.colorNode = colorNode();
 
-      // console.log(Object.keys(boxMaterial).filter((key) => key.endsWith("Node")));
-      
-
-      this._box.material = boxMaterial;
-      return;
-    }
     const planeSize = { width: 2, height: 2 };
     const boxGeometry = new THREE.BoxGeometry(
       planeSize.width,
@@ -100,11 +88,21 @@ export class Experience {
       transparent: false,
       side: THREE.FrontSide,
     });
-    boxMaterial.colorNode = colorNode();
+
+    this._boxMaterial = boxMaterial;
 
     const box = new THREE.Mesh(boxGeometry, boxMaterial);
-    this._scene.add(box);
     this._box = box;
+    this._scene.add(box);
+  }
+
+  public updateNode = (nodeName: keyof THREE.MeshStandardNodeMaterial, node: () => THREE.Node) => {
+    if (this._box) {
+      if(!this._boxMaterial) throw new Error("No material found");
+      
+      this._boxMaterial[nodeName] = node();
+      this._boxMaterial.needsUpdate = true;
+    }
   };
 
   private onWindowResize = () => {

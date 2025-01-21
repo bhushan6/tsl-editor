@@ -39,6 +39,7 @@ import "highlight.js/styles/atom-one-dark.css";
 import { createCustomNode } from "./nodes/CustomNode";
 import { Fn } from "three/tsl";
 import { UtilityNodes } from "./nodes/UtilityNodes";
+import { VaryingNode } from "./nodes/VaryingNode";
 
 hljs.registerLanguage("javascript", javascript);
 
@@ -645,6 +646,16 @@ function App() {
       makeButtonsDraggable(btn.element, node, "UniformNodes");
     });
 
+    const varyingNodesFolder = pane.current.addFolder({
+      title: "Varying",
+    });
+    Object.keys(VaryingNode).forEach((node) => {
+      const btn = varyingNodesFolder.addButton({
+        title: node,
+      });
+      makeButtonsDraggable(btn.element, node, "VaryingNode");
+    });
+
     const CustomNodesFolder = pane.current.addFolder({
       title: "Custom",
     });
@@ -814,7 +825,8 @@ function App() {
               MaterialNodes,
               CustomNodes,
               PositionNodes,
-              UtilityNodes
+              UtilityNodes,
+              VaryingNode
             };
 
             const [name, poolName] = e.dataTransfer

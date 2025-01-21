@@ -1,33 +1,20 @@
-import { Input, Output, schema, Node } from "../nodl-core";
+import { Input, schema, Node } from "../nodl-core";
 import { z } from "zod";
 
-import { vec4, Fn } from "three/tsl";
-import { combineLatest, map } from "rxjs";
+import { vec4 } from "three/tsl";
 
-const BaseColorSchema = schema(z.any());
 export class MeshStandardMaterialNode extends Node {
   name = "Mesh Standard Material";
   inputs = {
-    a: new Input({
+    BaseColor: new Input({
       name: "Base Color",
       type: schema(z.any()),
       defaultValue: () => vec4(1, 0, 0, 1),
     }),
   };
-  outputs = {
-    value: new Output({
-      name: "Value",
-      type: BaseColorSchema,
-      observable: combineLatest([this.inputs.a]).pipe(
-        map((inputs) => {
-          const i = inputs[0]();
-          return Fn(() => i);
-        })
-      ),
-    }),
-  };
+  outputs = {};
   public code = (args: string[]) => {
-    const argsString = !this.inputs.a.connected
+    const argsString = !this.inputs.BaseColor.connected
       ? `vec4(1, 0, 0, 1)`
       : args.join(", ");
     return {

@@ -1,47 +1,5 @@
 import { OrbitControls } from "three/examples/jsm/Addons.js";
 import * as THREE from "three/webgpu";
-import {
-  uv,
-  vec4,
-  float,
-  int,
-  uint,
-  bool,
-  color,
-  Fn,
-  add,
-  mul,
-  sub,
-  div,
-  mod,
-  modInt,
-  equal,
-  lessThan,
-  greaterThan,
-  lessThanEqual,
-  greaterThanEqual,
-  abs,
-  vec2,
-  acos,
-  asin,
-  atan,
-  atan2,
-  clamp,
-  ceil,
-  cos,
-  cross,
-  degrees,
-  distance,
-  dot,
-  floor,
-  fract,
-  length,
-  log,
-  vec3,
-  uniform,
-  time,
-  texture,
-} from "three/tsl";
 
 export class Experience {
   private _canvas: HTMLCanvasElement;
@@ -121,6 +79,9 @@ export class Experience {
         side: THREE.FrontSide,
       });
       boxMaterial.colorNode = colorNode();
+
+      // console.log(Object.keys(boxMaterial).filter((key) => key.endsWith("Node")));
+      
 
       this._box.material = boxMaterial;
       return;

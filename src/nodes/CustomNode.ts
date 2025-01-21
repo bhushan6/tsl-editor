@@ -4,15 +4,6 @@ import { z } from "zod";
 import { combineLatest, map, of } from "rxjs";
 import * as TSL from "three/tsl";
 
-// const tslIdentifiers = Object.keys(TSL);
-// const tslMethods = tslIdentifiers.map((identifier) => {
-//   //@ts-expect-error
-//   return TSL[identifier];
-// });
-
-// console.log(tslIdentifiers);
-// console.log(tslMethods);
-
 export const createCustomNode = (tslCode: string, name?: string) => {
   const tslVm = new TSLVm(tslCode);
 
@@ -55,52 +46,6 @@ export const createCustomNode = (tslCode: string, name?: string) => {
     };
 };
 
-// createCustomNode("Fn(() => vec2(0, 1))")
-
-const t1 = `Fn( ( [ uv, multiplier, rotation, offset ] ) => {
-
-					const centeredUv = uv.sub( 0.5 ).toVar();
-					const distanceToCenter = centeredUv.length();
-					const angle = atan( centeredUv.y, centeredUv.x );
-					const radialUv = vec2( angle.add( PI ).div( PI2 ), distanceToCenter ).toVar();
-					radialUv.mulAssign( multiplier );
-					radialUv.x.addAssign( rotation );
-					radialUv.y.addAssign( offset );
-					return radialUv;
-
-				} );
-                `;
-
-const t2 = `
-wtf
-asd,mna
-Fn(( [ uv, skew ] ) => {
-
-					return vec2(
-						uv.x.add( uv.y.mul( skew.x ) ),
-						uv.y.add( uv.x.mul( skew.y ) )
-					);
-
-				})();
-                asda
-`;
-
-// var userCodeStrict = '"use strict"; return ' + t1;
-// var userFunction = new Function(...tslIdentifiers, userCodeStrict);
-// console.log(userFunction(...tslMethods)(TSL.uv(), 1, 0, 0))
-
-// function extractFnCode(input: string) {
-//     // Match Fn( followed by any characters (non-greedy) until the matching closing parenthesis
-//     const fnPattern = /Fn\(\s*(\([^)]*\)\s*=>\s*{[\s\S]*?}\s*)\)/;
-//     const match = input.match(fnPattern);
-
-//     if (!match) {
-//         return null; // Return null if no match is found
-//     }
-
-//     // Return the full Fn(...) expression
-//     return `Fn(${match[1]})`;
-// }
 
 class TSLVm {
   private tslIdentifiers = Object.keys(TSL);
@@ -122,6 +67,8 @@ class TSLVm {
 
   private validateFnCode(input: string) {
     const ast = esprima.parseScript(input, { loc: true, range: true });
+    console.log({ast});
+    
     const validatedAST = this.validateAST(ast, new Set(this.tslIdentifiers));
     return validatedAST;
   }
@@ -206,5 +153,3 @@ class TSLVm {
       : userFunction(...this.tslMethods)();
   }
 }
-
-// const tslVm = new TSLVm(t1);

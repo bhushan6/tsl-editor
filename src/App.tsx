@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Experience } from "./components/Experience";
-import { Node } from "./nodl-core";
+import { Input, Node } from "./nodl-core";
 import "./App.css";
 import { MaterialNodes, MeshStandardMaterialNode } from "./nodes/MaterialNodes";
 import { Circuit, CircuitStore } from "./nodl-react";
@@ -20,6 +20,7 @@ import {
   Int,
   Uint,
 } from "./nodes/ConstantNodes";
+import { PositionNodes } from "./nodes/PositionNodes";
 import { toCartesianPoint } from "./nodl-react/utils/coordinates/coordinates";
 import { Subscription } from "rxjs";
 import { MathNodes } from "./nodes/MathNodes";
@@ -36,6 +37,8 @@ import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import "highlight.js/styles/atom-one-dark.css";
 import { createCustomNode } from "./nodes/CustomNode";
+import { Fn } from "three/tsl";
+import { UtilityNodes } from "./nodes/UtilityNodes";
 
 hljs.registerLanguage("javascript", javascript);
 
@@ -284,8 +287,9 @@ const MeshStandardMaterialUI = ({
   }, []);
 
   useEffect(() => {
-    const sub3 = node.outputs.value.subscribe((value) => {
-      experienceRef.current?.defaultBox(value);
+    const sub3 = node.inputs.BaseColor.subscribe((value) => {
+      const colorNode = Fn(value)
+      experienceRef.current?.defaultBox(colorNode);
     });
 
     return () => {
@@ -331,8 +335,8 @@ const MeshStandardMaterialUI = ({
         },
       };
 
-      const pushNodeToTree = (currentNode: Node, parentNode: TreeNodeType) => {
-        const currentInputs = Object.values(currentNode.inputs);
+      const pushNodeToTree = (currentNode: Node, parentNode: TreeNodeType, traceInput?: string) => {
+        const currentInputs: Input[] = traceInput ? Object.keys(currentNode.inputs).filter(inputName => inputName === traceInput).map(name => currentNode.inputs[name]).filter(input => input !== null || input !== undefined)  :  Object.values(currentNode.inputs) ;
 
         currentInputs.map((currentInput) => {
           const connection = currentInput.connection;
@@ -352,7 +356,7 @@ const MeshStandardMaterialUI = ({
         });
       };
 
-      pushNodeToTree(node, tree[node.id]);
+      pushNodeToTree(node, tree[node.id], "BaseColor");
 
       const traverseTree = (
         rootNode: TreeNodeType,
@@ -619,6 +623,17 @@ function App() {
       makeButtonsDraggable(btn.element, node, "AttributeNodes");
     });
 
+    const positionNodesFolder = pane.current.addFolder({
+      title: "Position",
+    });
+
+    Object.keys(PositionNodes).forEach((node) => {
+      const btn = positionNodesFolder.addButton({
+        title: node,
+      });
+      makeButtonsDraggable(btn.element, node, "PositionNodes");
+    });
+
     const uniformNodesFolder = pane.current.addFolder({
       title: "Uniforms",
     });
@@ -634,10 +649,21 @@ function App() {
       title: "Custom",
     });
 
-    console.log(CustomNodesFolder);
+    // console.log(CustomNodesFolder);
 
     const btn = CustomNodesFolder.addButton({
       title: "Create Custom Node",
+    });
+
+    const UtilityNodesFolder = pane.current.addFolder({
+      title: "Utility",
+    });
+
+    Object.keys(UtilityNodes).forEach((node) => {
+      const btn = UtilityNodesFolder.addButton({
+        title: node,
+      });
+      makeButtonsDraggable(btn.element, node, "UtilityNodes");
     });
 
     btn.on("click", () => {
@@ -683,9 +709,7 @@ function App() {
         <div className="popup-container">
           <div className="popup-header">
             <h2 className="popup-title">Add Node</h2>
-            {/*  */}
           </div>
-          {/* <form > */}
             <div className="form-group">
               <label htmlFor="nodeName" className="form-label">
                 Node Name:
@@ -694,8 +718,6 @@ function App() {
                 id="nodeName"
                 type="text"
                 ref={nameInputRef}
-                // value={nodeName}
-                
                 className="form-input"
               />
             </div>
@@ -706,9 +728,6 @@ function App() {
               <textarea
                 id="tslCode"
                 ref={nodeCodeInputRef}
-                
-                // value={tslCode}
-                // onChange={(e) => setTslCode(e.target.value)}
                 className="form-textarea"
               />
             </div>
@@ -740,14 +759,11 @@ function App() {
                 } catch (e) {
                   console.log(e)
                 }
-
-                
               }}
                className="button button-primary">
                 Add
               </button>
             </div>
-          {/* </form> */}
         </div>
       </div>
       )}
@@ -797,6 +813,8 @@ function App() {
               UniformNodes,
               MaterialNodes,
               CustomNodes,
+              PositionNodes,
+              UtilityNodes
             };
 
             const [name, poolName] = e.dataTransfer

@@ -1,8 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import { Fn, mix, mul, oneMinus, time, uv, vec2, vec3, vec4 } from "three/webgpu";
-import { smoothstep } from "three/src/math/MathUtils.js";
+// import { Fn } from "three/webgpu";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -10,26 +9,26 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>
 );
 
-// Fn(([scale]) => {
-//   return uv()
-//     .mul(scale)
-//     .add(vec2(0, time.mul(0.03).negate()));
-// })
+// Fn(() => {
 
-// Fn(([noiseTexture]) => {
- 
-//   const alpha = mul(
-//     noiseTexture.r.smoothstep(0.4, 1),
+//   const noiseVec = vec2(12.9898, 78.233);
+//   const noise = fract(sin(dot(uv(), noiseVec)).mul(43758.5453));
 
-//     smoothstep(0, 0.1, uv().x),
-//     smoothstep(0, 0.1, oneMinus(uv().x)),
-//     smoothstep(0, 0.1, uv().y),
-//     smoothstep(0, 0.1, oneMinus(uv().y))
-//   );
+//   return noise
+// });
 
-//   // color
-
-//   const finalColor = mix(vec3(0.6, 0.3, 0.2), vec3(1, 1, 1), alpha.pow(3));
-
-//   return vec4(finalColor, alpha);
-// })
+// Fn(([uvCoords, colorStart, colorEnd]) => {
+//   const center = vec2(0.5, 0.5); // Center of the gradient
+//   const radius = length(sub(uvCoords, center)); // Distance from center
+//   const gradient = mix(colorStart, colorEnd, smoothstep(0.0, 0.7, radius));
+  
+//   // Add a wave-like pattern for a more dynamic effect
+//   const waveIntensity = 0.1; // Intensity of the wave effect
+//   const waveFrequency = 10.0; // Frequency of the wave effect
+//   const wave = sin(mul(uvCoords.x, waveFrequency)).mul(waveIntensity);
+  
+//   // Apply the wave effect to the gradient
+//   const finalColor = mix(gradient, color(0xffffff), wave);
+  
+//   return finalColor;
+// });

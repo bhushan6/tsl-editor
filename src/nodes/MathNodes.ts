@@ -22,9 +22,14 @@ import {
   log,
   sin,
   mod,
+  normalize,
+  mix,
+  sqrt,
+  pow2,
+  pow,
 } from "three/tsl";
 import { combineLatest, map } from "rxjs";
-import { createVarNameForNode } from "./utils";
+import { createVarNameForNode, evaluateInputs } from "./utils";
 
 const AddInputSchema = schema(z.any());
 
@@ -48,9 +53,7 @@ export class Add extends Node {
       name: "Output",
       type: AddInputSchema,
       observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => {
-          return () => add(...inputs.map((i) => i()));
-        })
+        map((inputs) => evaluateInputs(inputs, add))
       ),
     }),
   };
@@ -68,35 +71,6 @@ export class Add extends Node {
       dependencies: ["add"],
     };
   };
-
-  // addInputPort = () => {
-  //   const inputIndex = Object.keys(this.inputs).length;
-  //   this.inputs = {
-  //     ...this.inputs,
-  //     [`input${inputIndex}`]: new Input({
-  //       name: `Input${inputIndex}`,
-  //       type: schema(z.any()),
-  //       defaultValue: () => 0,
-  //     }),
-  //   };
-
-  //   const inputs = Object.values(this.inputs);
-  //   const newObservable = combineLatest(inputs).pipe(
-  //     map((inputs) => {
-  //       return () => add(...inputs.map((i) => i()));
-  //     })
-  //   );
-
-  //   this.outputs.output.updateObservable(newObservable);
-
-  //   this.onUpdate();
-  // };
-
-  // onUpdate = () => {};
-
-  // addOnUpdate = (fn: () => void) => {
-  //   this.onUpdate = fn;
-  // };
 }
 
 export class Mul extends Node {
@@ -118,9 +92,7 @@ export class Mul extends Node {
       name: "Output",
       type: schema(z.any()),
       observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => {
-          return () => mul(...inputs.map((i) => i()));
-        })
+        map((inputs) => evaluateInputs(inputs, mul))
       ),
     }),
   };
@@ -158,9 +130,7 @@ export class Sub extends Node {
       name: "Output",
       type: schema(z.any()),
       observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => {
-          return () => sub(...inputs.map((i) => i()));
-        })
+        map((inputs) => evaluateInputs(inputs, sub))
       ),
     }),
   };
@@ -198,9 +168,7 @@ export class Div extends Node {
       name: "Output",
       type: schema(z.any()),
       observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => {
-          return () => div(...inputs.map((i) => i()));
-        })
+        map((inputs) => evaluateInputs(inputs, div))
       ),
     }),
   };
@@ -234,9 +202,7 @@ export class Abs extends Node {
       name: "Output",
       type: schema(z.any()),
       observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => {
-          return () => abs(...inputs.map((i) => i()));
-        })
+        map((inputs) => evaluateInputs(inputs, abs))
       ),
     }),
   };
@@ -254,10 +220,7 @@ export class Abs extends Node {
     };
   };
 }
-// Helper function to evaluate inputs
-const evaluateInputs = (inputs: any[], func: (...args: any[]) => any) => {
-  return () => func(...inputs.map((i) => i()));
-};
+
 
 export class Acos extends Node {
   name = "acos";
@@ -823,6 +786,178 @@ export class Log extends Node {
   };
 }
 
+export class Pow extends Node {
+  name = "pow";
+  inputs = {
+    x: new Input({
+      name: "Base",
+      type: schema(z.any()),
+      defaultValue: () => 1,
+    }),
+    y: new Input({
+      name: "Exponent",
+      type: schema(z.any()),
+      defaultValue: () => 1,
+    }),
+  };
+  outputs = {
+    output: new Output({
+      name: "Output",
+      type: schema(z.any()),
+      observable: combineLatest([...Object.values(this.inputs)]).pipe(
+        map((inputs) => evaluateInputs(inputs, pow))
+      ),
+    }),
+  };
+  code = (args: string[]) => {
+    const argsString = Object.values(this.inputs)
+      .map((input, i) => !input.connected ? "1" : args[i])
+      .filter((arg) => arg !== undefined && arg !== null)
+      .join(", ");
+    const varName = createVarNameForNode(this);
+    return {
+      code: `const ${varName} = pow(${argsString})`,
+      dependencies: ["pow"],
+    };
+  };
+}
+
+export class Pow2 extends Node {
+  name = "pow2";
+  inputs = {
+    x: new Input({
+      name: "Value",
+      type: schema(z.any()),
+      defaultValue: () => 1,
+    }),
+  };
+  outputs = {
+    output: new Output({
+      name: "Output",
+      type: schema(z.any()),
+      observable: combineLatest([...Object.values(this.inputs)]).pipe(
+        map((inputs) => evaluateInputs(inputs, pow2))
+      ),
+    }),
+  };
+  code = (args: string[]) => {
+    const argsString = Object.values(this.inputs)
+      .map((input, i) => !input.connected ? "1" : args[i])
+      .filter((arg) => arg !== undefined && arg !== null)
+      .join(", ");
+    const varName = createVarNameForNode(this);
+    return {
+      code: `const ${varName} = pow2(${argsString})`,
+      dependencies: ["pow2"],
+    };
+  };
+}
+
+export class Sqrt extends Node {
+  name = "sqrt";
+  inputs = {
+    x: new Input({
+      name: "Value",
+      type: schema(z.any()),
+      defaultValue: () => 1,
+    }),
+  };
+  outputs = {
+    output: new Output({
+      name: "Output",
+      type: schema(z.any()),
+      observable: combineLatest([...Object.values(this.inputs)]).pipe(
+        map((inputs) => evaluateInputs(inputs, sqrt))
+      ),
+    }),
+  };
+  code = (args: string[]) => {
+    const argsString = Object.values(this.inputs)
+      .map((input, i) => !input.connected ? "1" : args[i])
+      .filter((arg) => arg !== undefined && arg !== null)
+      .join(", ");
+    const varName = createVarNameForNode(this);
+    return {
+      code: `const ${varName} = sqrt(${argsString})`,
+      dependencies: ["sqrt"],
+    };
+  };
+}
+
+export class Mix extends Node {
+  name = "mix";
+  inputs = {
+    x: new Input({
+      name: "Value A",
+      type: schema(z.any()),
+      defaultValue: () => 0,
+    }),
+    y: new Input({
+      name: "Value B",
+      type: schema(z.any()),
+      defaultValue: () => 1,
+    }),
+    a: new Input({
+      name: "Alpha",
+      type: schema(z.any()),
+      defaultValue: () => 0.5,
+    }),
+  };
+  outputs = {
+    output: new Output({
+      name: "Output",
+      type: schema(z.any()),
+      observable: combineLatest([...Object.values(this.inputs)]).pipe(
+        map((inputs) => evaluateInputs(inputs, mix))
+      ),
+    }),
+  };
+  code = (args: string[]) => {
+    const argsString = Object.values(this.inputs)
+      .map((input, i) => !input.connected ? (i === 2 ? "0.5" : i === 1 ? "1" : "0") : args[i])
+      .filter((arg) => arg !== undefined && arg !== null)
+      .join(", ");
+    const varName = createVarNameForNode(this);
+    return {
+      code: `const ${varName} = mix(${argsString})`,
+      dependencies: ["mix"],
+    };
+  };
+}
+
+export class Normalize extends Node {
+  name = "normalize";
+  inputs = {
+    x: new Input({
+      name: "Vector",
+      type: schema(z.any()),
+      defaultValue: () => [0, 0, 0],
+    }),
+  };
+  outputs = {
+    output: new Output({
+      name: "Output",
+      type: schema(z.any()),
+      observable: combineLatest([...Object.values(this.inputs)]).pipe(
+        map((inputs) => evaluateInputs(inputs, normalize))
+      ),
+    }),
+  };
+  code = (args: string[]) => {
+    const argsString = Object.values(this.inputs)
+      .map((input, i) => !input.connected ? "[0, 0, 0]" : args[i])
+      .filter((arg) => arg !== undefined && arg !== null)
+      .join(", ");
+    const varName = createVarNameForNode(this);
+    return {
+      code: `const ${varName} = normalize(${argsString})`,
+      dependencies: ["normalize"],
+    };
+  };
+}
+
+
+
 export const MathNodes = {
   Add,
   Mul,
@@ -842,4 +977,9 @@ export const MathNodes = {
   Log,
   Sin,
   Mod,
+  Pow,
+  Pow2,
+  Sqrt,
+  Mix,
+  Normalize,
 };

@@ -109,7 +109,6 @@ const TSLNodes = {
 const nodeFactory = (name: keyof typeof TSLNodes) => {
   const node = TSLNodes[name];
   if (!node) throw new Error(`Node ${name} not found`);
-
   return class extends Node {
     name = name;
     inputs = {};
@@ -131,7 +130,7 @@ const nodeFactory = (name: keyof typeof TSLNodes) => {
   };
 };
 
-const generateNode = () => {
+export const generateNode = () => {
   const GeneratedNodes: { [key: string]: any } = {};
   for (const key in TSLNodes) {
     const nodeName = key as keyof typeof TSLNodes;

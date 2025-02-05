@@ -25,8 +25,6 @@ export class Connection<T> extends Subject<T> {
 
   constructor(from: Output<T>, to: Input<T>) {
     super();
-    console.log("Connection constructor");
-    console.log(from.type.name, to.type.name);
 
     if (!Connection.isTypeCompatible(from, to)) {
       throw new Error("Connection origin & target has incompatible types");

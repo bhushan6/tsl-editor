@@ -6,7 +6,8 @@ import { of } from "rxjs";
 import { createVarNameForNode } from "./utils";
 
 const UVSchema = schema(z.any());
-
+//type = "AttributeNode"
+//_attributeName = "uv"
 export class UV extends Node {
   name = "UV";
   inputs = {};
@@ -14,7 +15,7 @@ export class UV extends Node {
     value: new Output({
       name: "Value",
       type: UVSchema,
-      observable: of(uv),
+      observable: of(uv)
     }),
   };
   public code = () => {
@@ -26,8 +27,11 @@ export class UV extends Node {
   };
 }
 
+console.log(uv(1).toJSON(), "uv", "JSONDATATEST");
+
+//type: "VertexColorNode"
 export class VertexColor extends Node {
-  name = "Vertex Color";
+  name = "VertexColor";
   inputs = {};
   outputs = {
     value: new Output({
@@ -44,7 +48,7 @@ export class VertexColor extends Node {
     };
   };
 }
-
+// console.log(vertexColor().toJSON(), "vertexColor", "JSONDATATEST");
 export const AttributeNodes = {
   UV,
   VertexColor,

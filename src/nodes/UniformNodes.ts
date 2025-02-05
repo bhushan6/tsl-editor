@@ -9,11 +9,12 @@ export class Vec2Uniform extends Node {
   name = "Vec2Uniform";
   inputs = {};
   public _value = new Vector2();
+  private _cachedNodeValue = uniform(this._value)
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
-      observable: of(() => uniform(this._value)),
+      observable: of(() =>this._cachedNodeValue),
     }),
   };
   public code = () => {
@@ -31,11 +32,12 @@ export class Vec3Uniform extends Node {
   name = "Vec3Uniform";
   inputs = {};
   public _value = new Vector3();
+  private _cachedNodeValue = uniform(this._value)
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
-      observable: of(() => uniform(this._value)),
+      observable: of(() => this._cachedNodeValue),
     }),
   };
   public code = () => {
@@ -62,10 +64,9 @@ export class FloatUniform extends Node {
   };
   public code = () => {
     const varName = createVarNameForNode(this);
+   
     return {
-      code: `
-      const ${varName} = uniform(0)
-      `,
+      code: `const ${varName} = uniform(${this._value.value})`,
       dependencies: ["uniform"],
     };
   };
@@ -95,7 +96,7 @@ export class TimeUniform extends Node {
 const textureLoader = new TextureLoader();
 
 export class TextureUniform extends Node {
-  name = "Texture";
+  name = "TextureUniform";
   inputs = {
     uvs: new Input({
       name: "UVs",

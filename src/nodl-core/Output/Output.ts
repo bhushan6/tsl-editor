@@ -27,6 +27,7 @@ export class Output<TValue = any> extends ReplaySubject<TValue> {
     this.name = props.name || "Untitled";
     this.type = props.type;
     this.observable = props.observable;
+    if(props.id) this.id = props.id;
     this.subscription = this.observable.subscribe(this);
     this.connections = [];
 

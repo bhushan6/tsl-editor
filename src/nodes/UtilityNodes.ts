@@ -8,7 +8,7 @@ import {
   oscSquare,
   oscTriangle,
   oscSawtooth,
-  time,
+  time ,
   matcapUV,
   rotateUV,
   uv,
@@ -508,11 +508,7 @@ export class SpritesheetUV extends Node {
 export class EquirectUV extends Node {
   public name: string = "EquirectUV";
   public inputs: Record<string, Input<any>> = {
-    // a: new Input({
-    //   name: "positionWorldDirection",
-    //   type: schema(z.any()),
-    //   defaultValue: () => positionWorldDirection,
-    // }),
+
   };
   outputs = {
     output: new Output({
@@ -544,3 +540,43 @@ export const UtilityNodes = {
   SpritesheetUV,
   EquirectUV,
 };
+
+// const time = uniform(0).onFrameUpdate(({ delta }) => {
+//     time.value += delta * 2; // Speed multiplier
+// });
+
+// // Twist intensity control
+// const twistAmount = uniform(3.0);
+
+// // Calculate rotation angle based on Y position and time
+// const rotationAngle = positionLocal.y.mul(twistAmount).add(time);
+
+// // Calculate sin and cos of the angle
+// const cosTheta = rotationAngle.cos();
+// const sinTheta = rotationAngle.sin();
+
+// // Construct Y-axis rotation matrix
+// const rotationY = mat4(
+//     cosTheta, 0, sinTheta, 0,
+//     0, 1, 0, 0,
+//     sinTheta.negate(), 0, cosTheta, 0,
+//     0, 0, 0, 1
+// );
+
+// // Apply rotation to vertex position
+// const originalPosition = positionLocal.toVec4(1.0);
+// const twistedPosition = rotationY.mul(originalPosition).xyz;
+
+// // Pass twisted position to fragment shader through varying
+// const vTwistedPos = varying(twistedPosition);
+
+// // Set position node to modified position
+// material.positionNode = twistedPosition;
+
+// // Create color effect based on twisted position
+// material.colorNode = vTwistedPos
+//     .normalize()         // Normalize position vector
+//     .add(1.0)            // Shift range from [-1,1] to [0,2]
+//     .mul(0.5)            // Scale to [0,1] range
+//     .saturate();         // Clamp values between 0 and 1
+

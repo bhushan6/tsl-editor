@@ -6,4 +6,5 @@ export interface IOutputProps<T> {
     name?: string;
     type: Schema;
     observable: Observable<T>;
+    id?: string;
 }

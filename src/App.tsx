@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Experience } from "./components/Experience";
-import { Input, Node } from "./nodl-core";
+import { Input, Node, NodeSerialized } from "./nodl-core";
 import "./App.css";
 import { MaterialNodes, MeshStandardMaterialNode } from "./nodes/MaterialNodes";
 import { Circuit, CircuitStore } from "./nodl-react";
@@ -37,17 +37,45 @@ import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import "highlight.js/styles/atom-one-dark.css";
 import { createCustomNode } from "./nodes/CustomNode";
-import { ConstantColorFactor, Fn } from "three/tsl";
+import { Fn, log } from "three/tsl";
 import { UtilityNodes } from "./nodes/UtilityNodes";
 import { VaryingNode } from "./nodes/VaryingNode";
-
 hljs.registerLanguage("javascript", javascript);
 
 const CustomNodes: { [key: string]: Node } = {
 
 };
 
+const pools = {
+  ConstantNodes,
+  MathNodes,
+  AttributeNodes,
+  UniformNodes,
+  MaterialNodes,
+  CustomNodes,
+  PositionNodes,
+  UtilityNodes,
+  VaryingNode
+};
+
+const getNodeByName = (name: string) => {
+  const poolsValues = Object.values(pools)
+  for (let index = 0; index < poolsValues.length; index++) {
+    const pool = poolsValues[index];
+    const poolKeys = Object.keys(pool);
+    for (let index = 0; index < poolKeys.length; index++) {
+      const elementName = poolKeys[index];
+      const element = pool[elementName];
+      if(elementName === name) {
+        return element;
+      }
+    }
+  }
+  return null;
+}
+
 export let currentScale = 1;
+let currentTranslate = { x: 0, y: 0 };
 
 const store = new CircuitStore();
 
@@ -288,12 +316,12 @@ const MeshStandardMaterialUI = ({
   }, []);
 
   useEffect(() => {
-    const colorNodeSubs = node.inputs.colorNode.subscribe((value) => {
+    const colorNodeSubs = node.inputs.colorNode?.subscribe((value) => {
       const colorNode = Fn(value)
       experienceRef.current?.updateNode("colorNode", colorNode);
     });
 
-    const positionNodeSubs = node.inputs.positionNode.subscribe((value) => {
+    const positionNodeSubs = node.inputs.positionNode?.subscribe((value) => {
       const positionNode = Fn(value)
       experienceRef.current?.updateNode("positionNode", positionNode);
     });
@@ -455,6 +483,61 @@ function App() {
   const nodeWindowResolver = useNodeWindowResolver();
 
   useLayoutEffect(() => {
+    const data = localStorage.getItem("nodes")
+    if(data){
+      const deserialized = JSON.parse(data) as NodeSerialized[];
+      const connectionMap = new Map<string, string>()
+      const ouputNodeMap = new Map<string, {node: Node, name: string}>()
+      const inputNodeMap = new Map<string, {node: Node, name: string}>()
+      deserialized.forEach(element => {
+        const NodeEle = element.type === "CustomNode" ? createCustomNode(element.outputs.value.value) : getNodeByName(element.type);
+        if(!NodeEle) throw new Error(`${element.type} Node not found`)
+        const nodeInstance = new NodeEle() as Node;
+        const nodePosition = element.position
+        store.setNodes([[nodeInstance, nodePosition]])
+        Object.keys(element.inputs).forEach((inputKey) => {
+          const inputData = element.inputs[inputKey]
+          const data = JSON.parse(String(inputData.value.value))
+          const type = inputData.value.type
+          const id = String(inputData.id)
+
+          if(type === "CONNECTED"){
+            connectionMap.set(id, data.fromId)
+            inputNodeMap.set(id, {node: nodeInstance, name: inputKey})
+          }else if(type === "PRIMITIVE"){
+            nodeInstance.inputs[inputKey].next(() => data)
+          }else if(type === "NODE"){
+            console.log(data, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+            
+          }
+          
+          nodeInstance.inputs[inputKey].id = id
+        })
+        Object.keys(element.outputs).forEach((outputKey) => {
+          const outputData = element.outputs[outputKey]
+          const id = String(outputData.id)
+          ouputNodeMap.set(id, {node: nodeInstance, name: outputKey})
+          nodeInstance.outputs[outputKey].id = id
+        })
+      })
+      connectionMap.forEach((outputId, inputId) => {
+        const inputNode = inputNodeMap.get(inputId)
+        const outputNode = ouputNodeMap.get(outputId)
+        if(inputNode && outputNode){
+          const input = inputNode.node.inputs[inputNode.name]
+          const output = outputNode.node.outputs[outputNode.name]
+          console.log(input, output); 
+          
+          try{
+            // output?.connect(input)
+          }catch(e){
+            console.error(e);
+          }
+        }
+      })
+      
+    }
+
     return () => {
       store.dispose();
     };
@@ -465,8 +548,13 @@ function App() {
 
     if (!nodeCanvas) return;
     const nodeCanvasEle = nodeCanvas as HTMLDivElement;
+    const settings = localStorage.getItem("editor-settings")
+    if(settings){
+      const parsedSettings = JSON.parse(settings)
+      currentScale = parsedSettings.currentScale
+      currentTranslate = parsedSettings.currentTranslate
+    }
 
-    let currentTranslate = { x: 0, y: 0 };
     let panning = false;
 
     nodeCanvasEle.style.transformOrigin = "center";
@@ -666,8 +754,6 @@ function App() {
       title: "Custom",
     });
 
-    // console.log(CustomNodesFolder);
-
     const btn = CustomNodesFolder.addButton({
       title: "Create Custom Node",
     });
@@ -760,7 +846,6 @@ function App() {
               onClick={() => {
                 const name  = nameInputRef.current?.value
                 const code = nodeCodeInputRef.current?.value
-                console.log(name, code);
                 
                 if (!name || !code) return
                 try {
@@ -848,7 +933,6 @@ function App() {
             const node = pool[name];
             if (!node) return;
             const nodeInstance = new node();
-            console.log(currentScale);
 
             store.setNodes([
               [
@@ -866,6 +950,31 @@ function App() {
             store={store}
             nodeWindowResolver={nodeWindowResolver}
           />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            position: "absolute",
+            right: 0,
+            top: 0,
+            zIndex: 100000000,
+            padding: "10px",
+          }}
+        >
+          <button
+            onClick={() => {
+              const serializedNodes: NodeSerialized[] = []
+              store.nodes.forEach(node => {
+                const pos = store.nodePositions.get(node.id)
+                if(!pos) throw new Error("No position found for node")
+                serializedNodes.push({...node.serialize(), position: {x: pos.x, y: pos.y} })
+              })
+              localStorage.setItem("nodes", JSON.stringify(serializedNodes))
+              localStorage.setItem("editor-settings", JSON.stringify({currentScale, currentTranslate}))
+            }}
+          >Serialize</button>
         </div>
       </div>
     </>

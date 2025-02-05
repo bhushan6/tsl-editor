@@ -19,7 +19,7 @@ export const createCustomNode = (tslCode: string, name?: string) => {
   });
 
     return class CustomNode extends Node {
-      public name: string = "Custom Node";
+      public name: string = "CustomNode";
 
       public localName: string | null =  name || null;
 
@@ -42,6 +42,10 @@ export const createCustomNode = (tslCode: string, name?: string) => {
           code: "",
           dependencies: [],
         };
+      }
+
+      public getScript () {
+        return tslCode
       }
     };
 };
@@ -67,13 +71,13 @@ class TSLVm {
 
   private validateFnCode(input: string) {
     const ast = esprima.parseScript(input, { loc: true, range: true });
-    console.log({ast});
+    // console.log({ast});
     
     const validatedAST = this.validateAST(ast, new Set(this.tslIdentifiers));
     return validatedAST;
   }
 
-  private validateAST(node, allowedMethods) {
+  private validateAST(node, allowedMethods: Set<string>) {
     switch (node.type) {
       case "Program":
         node.body.forEach((statement) =>

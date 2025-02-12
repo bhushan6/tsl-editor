@@ -30,6 +30,8 @@ export class Connection<T> extends Subject<T> {
   constructor(from: Output<T>, to: Input<T>) {
     super();
 
+    EditorEventEmitter.emit("saveStateChanged", {state: "UNSAVED CHANGES"})
+
     if (!Connection.isTypeCompatible(from, to)) {
       throw new Error("Connection origin & target has incompatible types");
     }
@@ -76,5 +78,6 @@ export class Connection<T> extends Subject<T> {
     this.to.connection = null;
 
     this.to.next(this.to.defaultValue);
+    EditorEventEmitter.emit("changed")
   }
 }

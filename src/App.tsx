@@ -10,7 +10,7 @@ import { Input, Node, NodeSerialized } from "./nodl-core";
 import "./App.css";
 import { MaterialNodes, MeshStandardMaterialNode } from "./nodes/MaterialNodes";
 import { Circuit, CircuitStore } from "./nodl-react";
-import { Pane } from "tweakpane";
+import { ButtonApi, Pane } from "tweakpane";
 import {
   Float,
   Vec2,
@@ -783,6 +783,27 @@ function App() {
       expanded: true,
     });
 
+    const searchState = { query: '' };
+    
+    // Add search input using Tweakpane
+    const searchInput = pane.current.addBinding(searchState, 'query', {
+      label: 'Search Node',
+    });
+
+    // Create a map to store all buttons for easy filtering
+    const nodeButtons = new Map<string, ButtonApi>();
+
+    searchInput.on('change', (ev) => {
+      const searchTerm = ev.value.toLowerCase();
+      nodeButtons.forEach((btnContainer, fullName) => {
+        if (btnContainer) {
+          const shouldShow = fullName.toLowerCase().includes(searchTerm);
+          btnContainer.hidden = !shouldShow
+          pane.current.refresh()
+        }
+      });
+    });
+
     const makeButtonsDraggable = (
       btn: HTMLElement,
       nodeName: string,
@@ -804,6 +825,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "MaterialNodes");
+      nodeButtons.set(node, btn )
     });
 
     const constantNodesFolder = pane.current.addFolder({
@@ -815,6 +837,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "ConstantNodes");
+      nodeButtons.set(node, btn )
     });
 
     const mathNodesFolder = pane.current.addFolder({
@@ -826,6 +849,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "MathNodes");
+      nodeButtons.set(node, btn )
     });
 
     const attributeNodesFolder = pane.current.addFolder({
@@ -837,6 +861,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "AttributeNodes");
+      nodeButtons.set(node, btn )
     });
 
     const positionNodesFolder = pane.current.addFolder({
@@ -848,6 +873,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "PositionNodes");
+      nodeButtons.set(node, btn )
     });
 
     const uniformNodesFolder = pane.current.addFolder({
@@ -859,6 +885,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "UniformNodes");
+      nodeButtons.set(node, btn )
     });
 
     const varyingNodesFolder = pane.current.addFolder({
@@ -869,6 +896,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "VaryingNode");
+      nodeButtons.set(node, btn )
     });
 
     const CustomNodesFolder = pane.current.addFolder({
@@ -888,49 +916,20 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "UtilityNodes");
+      nodeButtons.set(node, btn )
     });
 
     btn.on("click", () => {
       setCustomNodeForm(p => !p)
     })
 
+
+
     return () => {
       pane.current.dispose();
     };
   }, []);
 
-  const save = () => {
-    const serializedNodes: NodeSerialized[] = []
-    store.nodes.forEach(node => {
-      const pos = store.nodePositions.get(node.id)
-      if (!pos) throw new Error("No position found for node")
-      serializedNodes.push({ ...node.serialize(), position: { x: pos.x, y: pos.y } })
-    })
-    localStorage.setItem("nodes", JSON.stringify(serializedNodes))
-    localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
-  }
-
-  // const codeBlockRef = useRef<HTMLDivElement>(null);
-
-  // useEffect(() => {
-  //   if (!codeBlockRef.current) return;
-  //   codeBlockRef.current.childNodes.forEach((child) => {
-  //     if (child instanceof HTMLElement) {
-  //       hljs.highlightElement(child);
-  //     }
-  //   });
-  //   // hljs.highlightElement(codeBlockRef.current);
-  // }, [hljs]);
-
-  // // const codeBlocks = [
-  // //   `const {(texture, uniform, vec2, vec4, uv, oscSine, time, grayscale)} =
-  // //   await import( 'three/tsl' );`,
-  // //   `const samplerTexture = new
-  // //   THREE.TextureLoader().load( './textures/uv_grid_opengl.jpg' );`,
-  // //   `samplerTexture.wrapS = THREE.RepeatWrapping; samplerTexture.colorSpace =
-  // //   THREE.SRGBColorSpace; `,
-  // //   `const scaledTime = time.mul( .5 ); // .5 is speed`,
-  // // ];
 
   const [customNodeForm, setCustomNodeForm] = useState(false)
 

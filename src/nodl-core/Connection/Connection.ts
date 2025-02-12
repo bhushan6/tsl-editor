@@ -4,6 +4,10 @@ import { v4 as uuid } from "uuid";
 
 import { Input } from "../Input/Input";
 import { Output } from "../Output/Output";
+import { EditorEventEmitter } from "../../nodes/utils";
+
+
+
 
 export class Connection<T> extends Subject<T> {
   /** Identifier */
@@ -43,10 +47,12 @@ export class Connection<T> extends Subject<T> {
     this.subscription = this.from.subscribe((value) => {
       try {
         this.to.type.validator.parse(value);
+        
         this.to.next(value);
+        EditorEventEmitter.emit("changed")
       } catch (err) {
         this.dispose();
-        throw new Error("Received a value with an incompatible type");
+        // throw new Error("Received a value with an incompatible type");
       }
     });
 

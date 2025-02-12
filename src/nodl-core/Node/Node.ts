@@ -23,6 +23,8 @@ export type NodeSerialized = {
   inputs: InputSerialized;
   outputs: OutputSerialized;
   position: { x: number; y: number };
+  internalValue?: string;
+  visibility: boolean
 };
 
 export abstract class Node<TData extends NodeData = NodeData> {
@@ -43,6 +45,16 @@ export abstract class Node<TData extends NodeData = NodeData> {
   };
   /** Arbitrary Data Store */
   public data: TData = {} as TData;
+
+  private _visible = true
+
+  public get visible () {
+    return this._visible
+  }
+
+  public set visible(state: boolean ){
+    this._visible = state;
+  }
 
   constructor(
     id?: string,
@@ -102,10 +114,7 @@ export abstract class Node<TData extends NodeData = NodeData> {
     }
   }
 
-  public serialize = (): NodeSerialized => {
-    //@ts-expect-error
-    console.log(this.name, ">>>>>>>>>>>>>");
-    
+  public serialize  (): NodeSerialized  {
     const inputs: InputSerialized = {};
 
     Object.entries(this.inputs).forEach(([key, input]) => {
@@ -158,7 +167,8 @@ export abstract class Node<TData extends NodeData = NodeData> {
       position: {
         x: 0,
         y: 0,
-      }
+      },
+      visibility: this._visible
     };
   };
 
@@ -170,3 +180,8 @@ export abstract class Node<TData extends NodeData = NodeData> {
     console.log(node);
   }
 }
+
+
+// Node.onVisibilityChange = (nodeId: string, visibility: boolean) => {
+//   console.log("onVisibilityChange", nodeId, visibility);
+// }

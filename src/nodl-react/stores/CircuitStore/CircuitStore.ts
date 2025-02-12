@@ -1,4 +1,4 @@
-import { Connection, Input, Node, Output } from "../../../nodl-core";
+import { Connection, Input, Node, NodeSerialized, Output } from "../../../nodl-core";
 import { isEmpty, isEqual, xorWith } from "lodash";
 import { autorun, IReactionDisposer, makeAutoObservable } from "mobx";
 import { createContext } from "react";
@@ -12,10 +12,15 @@ import {
   NodeWithPosition,
   StoreProviderValue,
 } from "./CircuitStore.types";
+import { currentScale, currentTranslate, getNodeByName } from "../../../App";
+import { createCustomNode } from "../../../nodes/CustomNode";
 
 export class CircuitStore {
   /** Associated Nodes */
   public nodes: Node[] = [];
+  /** Hidden Nodes */
+  private _hiddenNodes: Map<Node["id"], Node> = new Map()
+  private _hiddenNodesPosition: Map<Node["id"], { x: number; y: number }> = new Map()
   /** Associated Node Elements */
   public nodeElements: Map<Node["id"], HTMLDivElement> = new Map();
   /** Node Positions */
@@ -35,10 +40,22 @@ export class CircuitStore {
   /** Selection Bounds autorun disposer */
   private selectionBoundsDisposer: IReactionDisposer;
 
+  private _saveHandle: number | null = null;
+  private _unsavedChanges = false;
+
   constructor() {
     makeAutoObservable(this);
 
     this.selectionBoundsDisposer = this.onSelectionBoundsChange();
+
+    // Add beforeunload event listener
+    window.addEventListener('beforeunload', (e) => {
+      if (this._unsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    });
   }
 
   /** All associated connections */
@@ -51,9 +68,54 @@ export class CircuitStore {
   /** Sets the associated nodes */
   public setNodes(nodesWithPosition: NodeWithPosition[]) {
     for (const [node, position] of nodesWithPosition) {
-      this.nodes.push(node);
-      this.nodePositions.set(node.id, position);
+      if(node.visible){
+        this.nodes.push(node);
+        this.nodePositions.set(node.id, position);
+      }else{
+        this._hiddenNodes.set(node.id, node);
+        this._hiddenNodesPosition.set(node.id, position)
+      }
     }
+    this.save()
+  }
+
+  public unHideNode(id: string) {
+    const hiddenNode = this._hiddenNodes.get(id);
+    if(!hiddenNode) {
+      console.warn(`Node with id: ${id} does not exist`);
+      
+      return;
+    };
+
+    const position = this._hiddenNodesPosition.get(id)
+    if(!position) throw new Error(`${id} Node's position don't exist`)
+
+    hiddenNode.visible = true
+    this.setNodes([[hiddenNode, position]])
+
+  }
+
+  public hideNode(id: string){
+    let foundNode: Node | undefined;
+    this.nodes = this.nodes.filter(node => {
+      if (node.id === id) {
+        foundNode = node;
+        return false;
+      }
+      return true;
+    });
+
+    if (!foundNode) {
+      console.warn(`Node with id: ${id} does not exist`);
+      return;
+    }
+    const nodePosition = this.nodePositions.get(id)
+    if(!nodePosition) throw new Error("Node position don't exist")
+    this._hiddenNodesPosition.set(id, nodePosition)
+    this._hiddenNodes.set(id, foundNode);
+    foundNode.visible = false
+    this.nodeElements.delete(id);
+    this.nodePositions.delete(id);
   }
 
   /** Removes a node from the store */
@@ -61,6 +123,7 @@ export class CircuitStore {
     this.nodes = this.nodes.filter((node) => node.id !== nodeId);
     this.nodeElements.delete(nodeId);
     this.nodePositions.delete(nodeId);
+    this.save()
   }
 
   /** Associates a given Node instance with an HTML Element */
@@ -97,7 +160,7 @@ export class CircuitStore {
       const connection = this.draftConnectionSource.connect(target);
 
       this.setDraftConnectionSource(null);
-
+      this.save();
       return connection;
     }
   }
@@ -152,6 +215,14 @@ export class CircuitStore {
     this.mousePosition = { x: 0, y: 0 };
 
     this.selectionBoundsDisposer();
+    
+    // Clean up the idle callback if it exists
+    if (this._saveHandle !== null) {
+      window.cancelIdleCallback(this._saveHandle);
+    }
+    
+    // Remove the beforeunload listener
+    window.removeEventListener('beforeunload', () => {});
   }
 
   /** Automatically selects the nodes which are within the selection bounds */
@@ -193,6 +264,125 @@ export class CircuitStore {
         }
       }
     });
+  }
+
+  private serialize = () => {
+    console.log("SAVING...");
+    
+    const serializedNodes: NodeSerialized[] = []
+    this.nodes.forEach(node => {
+      const pos = this.nodePositions.get(node.id)
+      if (!pos) throw new Error("No position found for node")
+      serializedNodes.push({ ...node.serialize(), position: { x: pos.x, y: pos.y } })
+    })
+    localStorage.setItem("nodes", JSON.stringify(serializedNodes))
+    localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
+    
+    this._unsavedChanges = false;
+    console.log("SAVED!!!");
+  }
+
+  public save = () => {
+    this._unsavedChanges = true;
+    
+    // Cancel previous save if pending
+    if (this._saveHandle !== null) {
+      window.cancelIdleCallback(this._saveHandle);
+    }
+
+    // Schedule new save when thread is idle
+    this._saveHandle = window.requestIdleCallback(
+      () => {
+        this.serialize();
+        this._saveHandle = null;
+      },
+      { timeout: 2000 } // Ensure it runs within 2 seconds even if the system is busy
+    );
+  }
+
+  public loadFromJson = () => {
+    const data = localStorage.getItem("nodes")
+    const nodes: [Node, { x: number; y: number }][] = []
+    if (data) {
+      const deserialized = JSON.parse(data) as NodeSerialized[];
+      const connectionMap = new Map<string, string>()
+      const ouputNodeMap = new Map<string, { node: Node, name: string }>()
+      const inputNodeMap = new Map<string, { node: Node, name: string }>()
+
+      // console.log();
+
+
+      deserialized.forEach(element => {
+        const NodeEle = element.type === "CustomNode" ? createCustomNode(element.outputs.value.value) : getNodeByName(element.type);
+        if (!NodeEle) throw new Error(`${element.type} Node not found`)
+        const nodeInstance = new NodeEle() as Node;
+        const nodePosition = element.position
+        // console.log(nodeInstance);
+
+
+        nodes.push([nodeInstance, nodePosition])
+
+        if (element.internalValue && nodeInstance.deserialize) {
+          nodeInstance.deserialize(element.internalValue);
+        }
+
+        nodeInstance.visible = true
+        Object.keys(element.inputs).forEach((inputKey) => {
+          const inputData = element.inputs[inputKey]
+          const serializedData = String(inputData.value.value)
+          const data = JSON.parse(serializedData)
+          const type = inputData.value.type
+          const id = String(inputData.id)
+
+
+          if (type === "CONNECTED") {
+            connectionMap.set(id, data.fromId)
+            inputNodeMap.set(id, { node: nodeInstance, name: inputKey })
+          } else if (type === "PRIMITIVE") {
+            if (nodeInstance.setValue) {
+              // nodeInstance.setValue(data)
+            } else {
+              nodeInstance.inputs[inputKey].next(() => data)
+            }
+          } else if (type === "NODE") {
+            //TODO : handle this condition
+          }
+
+          nodeInstance.inputs[inputKey].id = id
+        })
+
+        Object.keys(element.outputs).forEach((outputKey) => {
+          const outputData = element.outputs[outputKey]
+          const id = String(outputData.id)
+          ouputNodeMap.set(id, { node: nodeInstance, name: outputKey })
+          nodeInstance.outputs[outputKey].id = id
+        })
+
+        // nodes.forEach(node => store.setNode)
+
+      })
+      this.setNodes(nodes)
+      setTimeout(() => {
+        connectionMap.forEach((outputId, inputId) => {
+          const inputNode = inputNodeMap.get(inputId)
+          const outputNode = ouputNodeMap.get(outputId)
+          if (inputNode && outputNode) {
+            const input = inputNode.node.inputs[inputNode.name]
+            const output = outputNode.node.outputs[outputNode.name]
+            // console.log(input, output); 
+
+            try {
+              console.log({ in: inputNode.name, out: outputNode.name });
+              output?.connect(input)
+            } catch (e) {
+              console.error(e);
+            }
+
+          }
+        })
+      }, 1000)
+
+    }
   }
 }
 

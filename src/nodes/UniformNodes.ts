@@ -26,6 +26,21 @@ export class Vec2Uniform extends Node {
       dependencies: ["uniform"],
     };
   };
+  public serialize() {
+    const base = super.serialize();
+    const value = this._value.toArray()
+    base.internalValue = JSON.stringify(value)    
+    return base;
+  }
+  public deserialize(data: string){
+    try {
+      const values = JSON.parse(data);
+      if(!Array.isArray(values)) throw new Error(`Data should be serialized array for ${this.name} node`);
+      this._value.fromArray(values)
+    }catch(e){
+      console.error(e);
+    }
+  }
 }
 
 export class Vec3Uniform extends Node {
@@ -49,6 +64,21 @@ export class Vec3Uniform extends Node {
       dependencies: ["uniform"],
     };
   };
+  public serialize() {
+    const base = super.serialize();
+    const value = this._value.toArray()
+    base.internalValue = JSON.stringify(value)    
+    return base;
+  }
+  public deserialize(data: string) {
+    try {
+      const values = JSON.parse(data);
+      if(!Array.isArray(values)) throw new Error(`Data should be serialized array for ${this.name} node`);
+      this._value.fromArray(values)
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class FloatUniform extends Node {
@@ -70,6 +100,20 @@ export class FloatUniform extends Node {
       dependencies: ["uniform"],
     };
   };
+  public serialize() {
+    const base = super.serialize();
+    base.internalValue = JSON.stringify(this._value.value)    
+    return base;
+  }
+  public deserialize(data: string) {
+    try {
+      const value = JSON.parse(data);
+      if(typeof value !== 'number') throw new Error(`Data should be a number for ${this.name} node`);
+      this._value.value = value;
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class TimeUniform extends Node {

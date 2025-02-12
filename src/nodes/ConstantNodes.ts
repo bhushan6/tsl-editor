@@ -1,4 +1,4 @@
-import { Input, Output, schema, Node } from "../nodl-core";
+import { Input, Output, schema, Node, NodeSerialized } from "../nodl-core";
 import { z } from "zod";
 import {
   vec2,
@@ -26,8 +26,34 @@ import {
   mul,
 } from "three/tsl";
 
-import { combineLatest, map } from "rxjs";
+import { combineLatest, map, of, BehaviorSubject } from "rxjs";
 import { createVarNameForNode } from "./utils";
+import { Observable } from 'rxjs';
+
+const foo = new Observable((subscriber) => {
+  console.log('Hello');
+  subscriber.next(() => color("#ff0ff"));
+  // subscriber.next(100); // "return" another value
+  // subscriber.next(200); // "return" yet another
+});
+
+const bar = of(0)
+
+
+bar.subscribe((x) => {
+  console.log(x);
+
+})
+
+bar
+
+
+
+console.log('before');
+foo.subscribe((x) => {
+  console.log(x);
+});
+console.log('after');
 
 // float.prototype.toJSON = function () {
 //   return  {
@@ -101,8 +127,8 @@ export class Float extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = float(${argsString})`,
@@ -141,8 +167,8 @@ export class Int extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = int(${argsString})`,
@@ -175,8 +201,8 @@ export class Uint extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = uint(${argsString})`,
@@ -198,6 +224,7 @@ export class Vec2 extends Node {
       type: Vec2Schema,
       observable: combineLatest([this.inputs.a, this.inputs.b]).pipe(
         map((inputs) => {
+          console.log({ inputs });
           return () => vec2(...inputs.map((i) => i()));
         })
       ),
@@ -342,7 +369,9 @@ export class SplitVec2 extends Node {
     a: new Input({
       name: "A",
       type: schema(z.any()),
-      defaultValue: () => vec2(1, 0),
+      defaultValue: () => {
+        return vec2(0, 0)
+      },
     }),
   };
   outputs = {
@@ -350,23 +379,27 @@ export class SplitVec2 extends Node {
       name: "X",
       type: schema(z.any()),
       observable: combineLatest([this.inputs.a]).pipe(
-        map((inputs) => () => inputs[0]().x)
+        map((inputs) => () => {
+          console.log(inputs);
+
+          return inputs[0]()?.x
+        })
       ),
     }),
     y: new Output({
       name: "Y",
       type: schema(z.any()),
       observable: combineLatest([this.inputs.a]).pipe(
-        map((inputs) => () => inputs[0]().y)
+        map((inputs) => () => inputs[0]()?.y)
       ),
     }),
   };
   code = (args: string[]) => {
     const input = this.inputs.a.connected
       ? {
-          x: `${args[0]}.x`,
-          y: `${args[0]}.y`,
-        }
+        x: `${args[0]}.x`,
+        y: `${args[0]}.y`,
+      }
       : this.inputs.a.getValue()();
     const varName = createVarNameForNode(this);
     return {
@@ -415,10 +448,10 @@ export class SplitVec3 extends Node {
   code = (args: string[]) => {
     const input = this.inputs.a.connected
       ? {
-          x: `${args[0]}.x`,
-          y: `${args[0]}.y`,
-          z: `${args[0]}.z`,
-        }
+        x: `${args[0]}.x`,
+        y: `${args[0]}.y`,
+        z: `${args[0]}.z`,
+      }
       : this.inputs.a.getValue()();
     const varName = createVarNameForNode(this);
     return {
@@ -474,11 +507,11 @@ export class SplitVec4 extends Node {
   code = (args: string[]) => {
     const input = this.inputs.a.connected
       ? {
-          x: `${args[0]}.x`,
-          y: `${args[0]}.y`,
-          z: `${args[0]}.z`,
-          w: `${args[0]}.w`,
-        }
+        x: `${args[0]}.x`,
+        y: `${args[0]}.y`,
+        z: `${args[0]}.z`,
+        w: `${args[0]}.w`,
+      }
       : this.inputs.a.getValue()();
     const varName = createVarNameForNode(this);
     return {
@@ -517,8 +550,8 @@ export class Boolean extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = bool(${argsString})`,
@@ -529,44 +562,46 @@ export class Boolean extends Node {
 
 export class Color extends Node {
   name = "Color";
-  inputs = {
-    r: new Input({ name: "R", type: schema(z.any()), defaultValue: () => 1 }),
-    g: new Input({ name: "G", type: schema(z.any()), defaultValue: () => 1 }),
-    b: new Input({ name: "B", type: schema(z.any()), defaultValue: () => 1 }),
-  };
+  inputs = {};
+  
+  public _value = new BehaviorSubject("#000000");
+
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
-      observable: combineLatest([
-        this.inputs.r,
-        this.inputs.g,
-        this.inputs.b,
-      ]).pipe(
-        map((inputs) => {
-          return () => color(...inputs.map((i) => i()));
-        })
-      ),
+      observable: this._value.pipe(
+        map(value => () => color(value))
+      )
     }),
   };
-  code = (args: string[]) => {
-    let index = 0;
-    const argsString = Object.values(this.inputs)
-      .map((input) => {
-        if (input.connected) {
-          const arg = args[index];
-          index++;
-          return arg;
-        }
-        return input.getValue()();
-      })
-      .join(", ");
+
+  public setValue(newColor: string) {
+    this._value.next(newColor);
+  }
+
+  code = () => {
     const varName = createVarNameForNode(this);
     return {
-      code: `const ${varName} = color(${argsString})`,
+      code: `const ${varName} = color("${this._value.value}")`,
       dependencies: ["color"],
     };
   };
+
+  public serialize() {
+    const base = super.serialize();
+    base.internalValue = this._value.value   
+    return base;
+  }
+
+  public deserialize(data: string) {
+    try {
+      if(typeof data !== 'string') throw new Error(`Data should be a string for ${this.name} node`);
+      this._value.next(data);
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class Mat2 extends Node {

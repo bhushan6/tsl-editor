@@ -1,12 +1,9 @@
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 // import { Fn } from "three/webgpu";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
     <App />
-  </StrictMode>
 );
 
 // Fn(() => {

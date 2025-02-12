@@ -4,6 +4,10 @@ import { v4 as uuid } from "uuid";
 
 import { Input } from "../Input/Input";
 import { Output } from "../Output/Output";
+import { EditorEventEmitter } from "../../nodes/utils";
+
+
+
 
 export class Connection<T> extends Subject<T> {
   /** Identifier */
@@ -25,8 +29,6 @@ export class Connection<T> extends Subject<T> {
 
   constructor(from: Output<T>, to: Input<T>) {
     super();
-    console.log("Connection constructor");
-    console.log(from.type.name, to.type.name);
 
     if (!Connection.isTypeCompatible(from, to)) {
       throw new Error("Connection origin & target has incompatible types");
@@ -45,10 +47,12 @@ export class Connection<T> extends Subject<T> {
     this.subscription = this.from.subscribe((value) => {
       try {
         this.to.type.validator.parse(value);
+        
         this.to.next(value);
+        EditorEventEmitter.emit("changed")
       } catch (err) {
         this.dispose();
-        throw new Error("Received a value with an incompatible type");
+        // throw new Error("Received a value with an incompatible type");
       }
     });
 

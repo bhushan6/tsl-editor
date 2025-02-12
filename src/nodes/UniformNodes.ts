@@ -9,11 +9,12 @@ export class Vec2Uniform extends Node {
   name = "Vec2Uniform";
   inputs = {};
   public _value = new Vector2();
+  private _cachedNodeValue = uniform(this._value)
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
-      observable: of(() => uniform(this._value)),
+      observable: of(() =>this._cachedNodeValue),
     }),
   };
   public code = () => {
@@ -25,17 +26,33 @@ export class Vec2Uniform extends Node {
       dependencies: ["uniform"],
     };
   };
+  public serialize() {
+    const base = super.serialize();
+    const value = this._value.toArray()
+    base.internalValue = JSON.stringify(value)    
+    return base;
+  }
+  public deserialize(data: string){
+    try {
+      const values = JSON.parse(data);
+      if(!Array.isArray(values)) throw new Error(`Data should be serialized array for ${this.name} node`);
+      this._value.fromArray(values)
+    }catch(e){
+      console.error(e);
+    }
+  }
 }
 
 export class Vec3Uniform extends Node {
   name = "Vec3Uniform";
   inputs = {};
   public _value = new Vector3();
+  private _cachedNodeValue = uniform(this._value)
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
-      observable: of(() => uniform(this._value)),
+      observable: of(() => this._cachedNodeValue),
     }),
   };
   public code = () => {
@@ -47,6 +64,21 @@ export class Vec3Uniform extends Node {
       dependencies: ["uniform"],
     };
   };
+  public serialize() {
+    const base = super.serialize();
+    const value = this._value.toArray()
+    base.internalValue = JSON.stringify(value)    
+    return base;
+  }
+  public deserialize(data: string) {
+    try {
+      const values = JSON.parse(data);
+      if(!Array.isArray(values)) throw new Error(`Data should be serialized array for ${this.name} node`);
+      this._value.fromArray(values)
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class FloatUniform extends Node {
@@ -62,13 +94,26 @@ export class FloatUniform extends Node {
   };
   public code = () => {
     const varName = createVarNameForNode(this);
+   
     return {
-      code: `
-      const ${varName} = uniform(0)
-      `,
+      code: `const ${varName} = uniform(${this._value.value})`,
       dependencies: ["uniform"],
     };
   };
+  public serialize() {
+    const base = super.serialize();
+    base.internalValue = JSON.stringify(this._value.value)    
+    return base;
+  }
+  public deserialize(data: string) {
+    try {
+      const value = JSON.parse(data);
+      if(typeof value !== 'number') throw new Error(`Data should be a number for ${this.name} node`);
+      this._value.value = value;
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class TimeUniform extends Node {
@@ -95,7 +140,7 @@ export class TimeUniform extends Node {
 const textureLoader = new TextureLoader();
 
 export class TextureUniform extends Node {
-  name = "Texture";
+  name = "TextureUniform";
   inputs = {
     uvs: new Input({
       name: "UVs",

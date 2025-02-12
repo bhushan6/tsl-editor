@@ -74,7 +74,7 @@ export class Add extends Node {
 }
 
 export class Mul extends Node {
-  name = "mul";
+  name = "Mul";
   inputs = {
     a: new Input({
       name: "Value",
@@ -112,7 +112,7 @@ export class Mul extends Node {
 }
 
 export class Sub extends Node {
-  name = "sub";
+  name = "Sub";
   inputs = {
     a: new Input({
       name: "Value",
@@ -150,7 +150,7 @@ export class Sub extends Node {
 }
 
 export class Div extends Node {
-  name = "div";
+  name = "Div";
   inputs = {
     a: new Input({
       name: "Value",
@@ -189,7 +189,7 @@ export class Div extends Node {
 
 //create Nodes for above functions
 export class Abs extends Node {
-  name = "abs";
+  name = "Abs";
   inputs = {
     a: new Input({
       name: "Value",
@@ -223,7 +223,7 @@ export class Abs extends Node {
 
 
 export class Acos extends Node {
-  name = "acos";
+  name = "Acos";
   inputs = {
     a: new Input({
       name: "Value",
@@ -256,7 +256,7 @@ export class Acos extends Node {
 }
 
 export class Asin extends Node {
-  name = "asin";
+  name = "Asin";
   inputs = {
     a: new Input({
       name: "Value",
@@ -289,7 +289,7 @@ export class Asin extends Node {
 }
 
 export class Atan extends Node {
-  name = "atan";
+  name = "Atan";
   inputs = {
     y: new Input({
       name: "Y",
@@ -327,7 +327,7 @@ export class Atan extends Node {
 }
 
 export class Clamp extends Node {
-  name = "clamp";
+  name = "Clamp";
   inputs = {
     x: new Input({
       name: "Value",
@@ -370,7 +370,7 @@ export class Clamp extends Node {
 }
 
 export class Ceil extends Node {
-  name = "ceil";
+  name = "Ceil";
   inputs = {
     a: new Input({
       name: "Value",
@@ -404,7 +404,7 @@ export class Ceil extends Node {
 }
 
 export class Cos extends Node {
-  name = "cos";
+  name = "Cos";
   inputs = {
     a: new Input({
       name: "Value",
@@ -437,7 +437,7 @@ export class Cos extends Node {
 }
 
 export class Sin extends Node {
-  name = "sin";
+  name = "Sin";
   inputs = {
     a: new Input({
       name: "Value",
@@ -470,7 +470,7 @@ export class Sin extends Node {
 }
 
 export class Cross extends Node {
-  name = "cross";
+  name = "Cross";
   inputs = {
     x: new Input({
       name: "Vector A",
@@ -508,7 +508,7 @@ export class Cross extends Node {
 }
 
 export class Mod extends Node {
-  name = "mod";
+  name = "Mod";
   inputs = {
     x: new Input({
       name: "Vector A",
@@ -546,7 +546,7 @@ export class Mod extends Node {
 }
 
 export class Degrees extends Node {
-  name = "degrees";
+  name = "Degrees";
   inputs = {
     a: new Input({
       name: "Radians",
@@ -579,7 +579,7 @@ export class Degrees extends Node {
 }
 
 export class Distance extends Node {
-  name = "distance";
+  name = "Distance";
   inputs = {
     x: new Input({
       name: "Point A",
@@ -617,7 +617,7 @@ export class Distance extends Node {
 }
 
 export class Dot extends Node {
-  name = "dot";
+  name = "Dot";
   inputs = {
     x: new Input({
       name: "Vector A",
@@ -655,7 +655,7 @@ export class Dot extends Node {
 }
 
 export class Floor extends Node {
-  name = "floor";
+  name = "Floor";
   inputs = {
     a: new Input({
       name: "Value",
@@ -688,7 +688,7 @@ export class Floor extends Node {
 }
 
 export class Fract extends Node {
-  name = "fract";
+  name = "Fract";
   inputs = {
     a: new Input({
       name: "Value",
@@ -721,7 +721,7 @@ export class Fract extends Node {
 }
 
 export class Length extends Node {
-  name = "length";
+  name = "Length";
   inputs = {
     a: new Input({
       name: "Vector",
@@ -754,7 +754,7 @@ export class Length extends Node {
 }
 
 export class Log extends Node {
-  name = "log";
+  name = "Log";
   inputs = {
     a: new Input({
       name: "Value",
@@ -787,7 +787,7 @@ export class Log extends Node {
 }
 
 export class Pow extends Node {
-  name = "pow";
+  name = "Pow";
   inputs = {
     x: new Input({
       name: "Base",
@@ -823,7 +823,7 @@ export class Pow extends Node {
 }
 
 export class Pow2 extends Node {
-  name = "pow2";
+  name = "Pow2";
   inputs = {
     x: new Input({
       name: "Value",
@@ -854,7 +854,7 @@ export class Pow2 extends Node {
 }
 
 export class Sqrt extends Node {
-  name = "sqrt";
+  name = "Sqrt";
   inputs = {
     x: new Input({
       name: "Value",
@@ -885,7 +885,7 @@ export class Sqrt extends Node {
 }
 
 export class Mix extends Node {
-  name = "mix";
+  name = "Mix";
   inputs = {
     x: new Input({
       name: "Value A",
@@ -926,7 +926,7 @@ export class Mix extends Node {
 }
 
 export class Normalize extends Node {
-  name = "normalize";
+  name = "Normalize";
   inputs = {
     x: new Input({
       name: "Vector",

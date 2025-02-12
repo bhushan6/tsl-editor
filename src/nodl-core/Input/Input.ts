@@ -25,6 +25,7 @@ export class Input<TValue = any> extends BehaviorSubject<TValue> {
     this.type = props.type;
     this.defaultValue = props.defaultValue;
     this.connection = null;
+    if(props.id) this.id = props.id;
 
     makeObservable(this, {
       id: observable,

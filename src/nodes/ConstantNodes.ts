@@ -1,10 +1,101 @@
-import { Input, Output, schema, Node } from "../nodl-core";
+import { Input, Output, schema, Node, NodeSerialized } from "../nodl-core";
 import { z } from "zod";
-import { vec2, vec3, vec4, float, int, uint, bool, color, mat2, mat3, mat4, ivec2, ivec3, ivec4, bvec4, bvec3, bvec2, uvec4, uvec3, uvec2 } from "three/tsl";
+import {
+  vec2,
+  vec3,
+  vec4,
+  float,
+  int,
+  uint,
+  bool,
+  color,
+  mat2,
+  mat3,
+  mat4,
+  ivec2,
+  ivec3,
+  ivec4,
+  bvec4,
+  bvec3,
+  bvec2,
+  uvec4,
+  uvec3,
+  uvec2,
+  uv,
+  positionLocal,
+  mul,
+} from "three/tsl";
 
-import { combineLatest, map } from "rxjs";
+import { combineLatest, map, of, BehaviorSubject } from "rxjs";
 import { createVarNameForNode } from "./utils";
+import { Observable } from 'rxjs';
 
+const foo = new Observable((subscriber) => {
+  console.log('Hello');
+  subscriber.next(() => color("#ff0ff"));
+  // subscriber.next(100); // "return" another value
+  // subscriber.next(200); // "return" yet another
+});
+
+const bar = of(0)
+
+
+bar.subscribe((x) => {
+  console.log(x);
+
+})
+
+bar
+
+
+
+console.log('before');
+foo.subscribe((x) => {
+  console.log(x);
+});
+console.log('after');
+
+// float.prototype.toJSON = function () {
+//   return  {
+//         type: "primiitive",
+//         value: this.x,
+//       };
+// };
+const f = mat4();
+const u = uv(1);
+const p = positionLocal;
+const m = mul(p, p);
+const sf = f.toJSON();
+console.log(sf);
+const f2 = mat4(sf.value);
+console.log(f2.toJSON());
+// console.log({
+//   type: f.type,
+//   nodeType: f.nodeType,
+//   valueType: f.valueType,
+//   value: f.value,
+// });
+// const f2 = mat4(f.value);
+// console.log(f2);
+
+// console.log({
+//   type: u.type,
+//   nodeType: u.nodeType,
+//   valueType: u.valueType,
+//   value: u.value,
+// });
+// console.log({
+//   type: p.type,
+//   nodeType: p.nodeType,
+//   valueType: p.valueType,
+//   value: p.value,
+// });
+// console.log({
+//   type: m.type,
+//   nodeType: m.nodeType,
+//   valueType: m.valueType,
+//   value: m.value,
+// });
 
 export class Float extends Node {
   name = "Float";
@@ -13,6 +104,12 @@ export class Float extends Node {
       name: "A",
       type: schema(z.any()),
       defaultValue: () => 0,
+      // serialize: () => {
+      //   return {
+      //     type: "primiitive",
+      //     value: this.inputs.a.getValue()(),
+      //   }
+      // }
     }),
   };
   outputs = {
@@ -30,8 +127,8 @@ export class Float extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = float(${argsString})`,
@@ -47,6 +144,12 @@ export class Int extends Node {
       name: "A",
       type: schema(z.any()),
       defaultValue: () => 0,
+      // serialize: () => {
+      //   return {
+      //     type: "primiitive",
+      //     value: this.inputs.a.getValue()(),
+      //   }
+      // }
     }),
   };
   outputs = {
@@ -64,8 +167,8 @@ export class Int extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = int(${argsString})`,
@@ -98,8 +201,8 @@ export class Uint extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = uint(${argsString})`,
@@ -121,6 +224,7 @@ export class Vec2 extends Node {
       type: Vec2Schema,
       observable: combineLatest([this.inputs.a, this.inputs.b]).pipe(
         map((inputs) => {
+          console.log({ inputs });
           return () => vec2(...inputs.map((i) => i()));
         })
       ),
@@ -128,6 +232,7 @@ export class Vec2 extends Node {
   };
   public code = (args: string[]) => {
     let index = 0;
+
     const argsString = Object.values(this.inputs)
       .map((input) => {
         console.log(input.name, input.connected);
@@ -259,12 +364,14 @@ export class Vec4 extends Node {
 }
 
 export class SplitVec2 extends Node {
-  name = "Split Vec2";
+  name = "SplitVec2";
   inputs = {
     a: new Input({
       name: "A",
       type: schema(z.any()),
-      defaultValue: () => vec2(1, 0),
+      defaultValue: () => {
+        return vec2(0, 0)
+      },
     }),
   };
   outputs = {
@@ -272,23 +379,27 @@ export class SplitVec2 extends Node {
       name: "X",
       type: schema(z.any()),
       observable: combineLatest([this.inputs.a]).pipe(
-        map((inputs) => () => inputs[0]().x)
+        map((inputs) => () => {
+          console.log(inputs);
+
+          return inputs[0]()?.x
+        })
       ),
     }),
     y: new Output({
       name: "Y",
       type: schema(z.any()),
       observable: combineLatest([this.inputs.a]).pipe(
-        map((inputs) => () => inputs[0]().y)
+        map((inputs) => () => inputs[0]()?.y)
       ),
     }),
   };
   code = (args: string[]) => {
     const input = this.inputs.a.connected
       ? {
-          x: `${args[0]}.x`,
-          y: `${args[0]}.y`,
-        }
+        x: `${args[0]}.x`,
+        y: `${args[0]}.y`,
+      }
       : this.inputs.a.getValue()();
     const varName = createVarNameForNode(this);
     return {
@@ -302,7 +413,7 @@ export class SplitVec2 extends Node {
 }
 
 export class SplitVec3 extends Node {
-  name = "Split Vec3";
+  name = "SplitVec3";
   inputs = {
     a: new Input({
       name: "A",
@@ -337,10 +448,10 @@ export class SplitVec3 extends Node {
   code = (args: string[]) => {
     const input = this.inputs.a.connected
       ? {
-          x: `${args[0]}.x`,
-          y: `${args[0]}.y`,
-          z: `${args[0]}.z`,
-        }
+        x: `${args[0]}.x`,
+        y: `${args[0]}.y`,
+        z: `${args[0]}.z`,
+      }
       : this.inputs.a.getValue()();
     const varName = createVarNameForNode(this);
     return {
@@ -355,7 +466,7 @@ export class SplitVec3 extends Node {
 }
 
 export class SplitVec4 extends Node {
-  name = "Split Vec4";
+  name = "SplitVec4";
   inputs = {
     a: new Input({
       name: "A",
@@ -396,11 +507,11 @@ export class SplitVec4 extends Node {
   code = (args: string[]) => {
     const input = this.inputs.a.connected
       ? {
-          x: `${args[0]}.x`,
-          y: `${args[0]}.y`,
-          z: `${args[0]}.z`,
-          w: `${args[0]}.w`,
-        }
+        x: `${args[0]}.x`,
+        y: `${args[0]}.y`,
+        z: `${args[0]}.z`,
+        w: `${args[0]}.w`,
+      }
       : this.inputs.a.getValue()();
     const varName = createVarNameForNode(this);
     return {
@@ -439,8 +550,8 @@ export class Boolean extends Node {
     const argsString = !this.inputs.a.connected
       ? `${this.inputs.a.getValue()()}`
       : args.length > 0
-      ? args.join(", ")
-      : "";
+        ? args.join(", ")
+        : "";
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = bool(${argsString})`,
@@ -451,40 +562,46 @@ export class Boolean extends Node {
 
 export class Color extends Node {
   name = "Color";
-  inputs = {
-    r: new Input({ name: "R", type: schema(z.any()), defaultValue: () => 1 }),
-    g: new Input({ name: "G", type: schema(z.any()), defaultValue: () => 1 }),
-    b: new Input({ name: "B", type: schema(z.any()), defaultValue: () => 1 }),
-  };
+  inputs = {};
+  
+  public _value = new BehaviorSubject("#000000");
+
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
-      observable: combineLatest([this.inputs.r, this.inputs.g, this.inputs.b]).pipe(
-        map((inputs) => {
-          return () => color(...inputs.map((i) => i()));
-        })
-      ),
+      observable: this._value.pipe(
+        map(value => () => color(value))
+      )
     }),
   };
-  code = (args: string[]) => {
-    let index = 0;
-    const argsString = Object.values(this.inputs)
-      .map((input) => {
-        if (input.connected) {
-          const arg = args[index];
-          index++;
-          return arg;
-        }
-        return input.getValue()();
-      })
-      .join(", ");
+
+  public setValue(newColor: string) {
+    this._value.next(newColor);
+  }
+
+  code = () => {
     const varName = createVarNameForNode(this);
     return {
-      code: `const ${varName} = color(${argsString})`,
+      code: `const ${varName} = color("${this._value.value}")`,
       dependencies: ["color"],
     };
   };
+
+  public serialize() {
+    const base = super.serialize();
+    base.internalValue = this._value.value   
+    return base;
+  }
+
+  public deserialize(data: string) {
+    try {
+      if(typeof data !== 'string') throw new Error(`Data should be a string for ${this.name} node`);
+      this._value.next(data);
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class Mat2 extends Node {
@@ -630,7 +747,7 @@ export class IVec2 extends Node {
   };
   outputs = {
     value: new Output({
-      name: "Value", 
+      name: "Value",
       type: schema(z.any()),
       observable: combineLatest([this.inputs.x, this.inputs.y]).pipe(
         map((inputs) => {
@@ -855,8 +972,16 @@ export class UVec4 extends Node {
 export class BVec2 extends Node {
   name = "BVec2";
   inputs = {
-    x: new Input({ name: "X", type: schema(z.any()), defaultValue: () => false }),
-    y: new Input({ name: "Y", type: schema(z.any()), defaultValue: () => false }),
+    x: new Input({
+      name: "X",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
+    y: new Input({
+      name: "Y",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
   };
   outputs = {
     value: new Output({
@@ -892,9 +1017,21 @@ export class BVec2 extends Node {
 export class BVec3 extends Node {
   name = "BVec3";
   inputs = {
-    x: new Input({ name: "X", type: schema(z.any()), defaultValue: () => false }),
-    y: new Input({ name: "Y", type: schema(z.any()), defaultValue: () => false }),
-    z: new Input({ name: "Z", type: schema(z.any()), defaultValue: () => false }),
+    x: new Input({
+      name: "X",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
+    y: new Input({
+      name: "Y",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
+    z: new Input({
+      name: "Z",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
   };
   outputs = {
     value: new Output({
@@ -930,10 +1067,26 @@ export class BVec3 extends Node {
 export class BVec4 extends Node {
   name = "BVec4";
   inputs = {
-    x: new Input({ name: "X", type: schema(z.any()), defaultValue: () => false }),
-    y: new Input({ name: "Y", type: schema(z.any()), defaultValue: () => false }),
-    z: new Input({ name: "Z", type: schema(z.any()), defaultValue: () => false }),
-    w: new Input({ name: "W", type: schema(z.any()), defaultValue: () => false }),
+    x: new Input({
+      name: "X",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
+    y: new Input({
+      name: "Y",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
+    z: new Input({
+      name: "Z",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
+    w: new Input({
+      name: "W",
+      type: schema(z.any()),
+      defaultValue: () => false,
+    }),
   };
   outputs = {
     value: new Output({
@@ -965,7 +1118,6 @@ export class BVec4 extends Node {
     };
   };
 }
-
 
 export const ConstantNodes = {
   Float,

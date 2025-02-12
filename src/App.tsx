@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Experience } from "./components/Experience";
-import { Input, Node } from "./nodl-core";
+import { Input, Node, NodeSerialized } from "./nodl-core";
 import "./App.css";
 import { MaterialNodes, MeshStandardMaterialNode } from "./nodes/MaterialNodes";
 import { Circuit, CircuitStore } from "./nodl-react";
@@ -19,12 +19,25 @@ import {
   ConstantNodes,
   Int,
   Uint,
+  Color,
+  Mat2,
+  Mat3,
+  Mat4,
+  IVec2,
+  IVec3,
+  IVec4,
+  UVec2,
+  UVec3,
+  UVec4,
+  BVec2,
+  BVec3,
+  BVec4,
 } from "./nodes/ConstantNodes";
 import { PositionNodes } from "./nodes/PositionNodes";
 import { toCartesianPoint } from "./nodl-react/utils/coordinates/coordinates";
 import { Subscription } from "rxjs";
 import { MathNodes } from "./nodes/MathNodes";
-import { AttributeNodes } from "./nodes/AttributeNodes";
+import { AttributeNodes, UV } from "./nodes/AttributeNodes";
 import {
   FloatUniform,
   TextureUniform,
@@ -32,22 +45,50 @@ import {
   Vec2Uniform,
   Vec3Uniform,
 } from "./nodes/UniformNodes";
-import { createVarNameForNode } from "./nodes/utils";
+import { createVarNameForNode, EditorEventEmitter } from "./nodes/utils";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import "highlight.js/styles/atom-one-dark.css";
 import { createCustomNode } from "./nodes/CustomNode";
-import { ConstantColorFactor, Fn } from "three/tsl";
+import { Fn } from "three/tsl";
 import { UtilityNodes } from "./nodes/UtilityNodes";
 import { VaryingNode } from "./nodes/VaryingNode";
-
 hljs.registerLanguage("javascript", javascript);
 
 const CustomNodes: { [key: string]: Node } = {
 
 };
 
+const pools = {
+  ConstantNodes,
+  MathNodes,
+  AttributeNodes,
+  UniformNodes,
+  MaterialNodes,
+  CustomNodes,
+  PositionNodes,
+  UtilityNodes,
+  VaryingNode
+};
+
+export const getNodeByName = (name: string) => {
+  const poolsValues = Object.values(pools)
+  for (let index = 0; index < poolsValues.length; index++) {
+    const pool = poolsValues[index];
+    const poolKeys = Object.keys(pool);
+    for (let index = 0; index < poolKeys.length; index++) {
+      const elementName = poolKeys[index];
+      const element = pool[elementName];
+      if (elementName === name) {
+        return element;
+      }
+    }
+  }
+  return null;
+}
+
 export let currentScale = 1;
+export let currentTranslate = { x: 0, y: 0 };
 
 const store = new CircuitStore();
 
@@ -59,24 +100,163 @@ const useNodeWindowResolver = () => {
       node instanceof Vec2 ||
       node instanceof Float ||
       node instanceof Int ||
-      node instanceof Uint
+      node instanceof Uint ||
+      node instanceof Mat2 ||
+      node instanceof Mat3 ||
+      node instanceof Mat4 ||
+      node instanceof IVec2 ||
+      node instanceof IVec3 ||
+      node instanceof IVec4 ||
+      node instanceof UVec2 ||
+      node instanceof UVec3 ||
+      node instanceof UVec4 ||
+      node instanceof BVec2 ||
+      node instanceof BVec3 ||
+      node instanceof BVec4
     ) {
       return <VecUI node={node} />;
     } else if (node instanceof MeshStandardMaterialNode) {
       return <MeshStandardMaterialUI node={node} />;
-    } else if (
+    }
+    else if (
       node instanceof Vec2Uniform ||
       node instanceof Vec3Uniform ||
       node instanceof FloatUniform
     ) {
       return <UniformUI node={node} />;
-    } else if (node instanceof TextureUniform) {
+    }
+    else if (node instanceof TextureUniform) {
       return <TextureUniformUI node={node} />;
+    } else if (node instanceof Color) {
+      return <ColorUI node={node} />
+    } else if (node instanceof UV) {
+      return <UVUI node={node} />
+    } else {
+      return null
     }
   }, []);
 };
 
-const VecUI = ({ node }: { node: Vec3 | Vec4 | Vec2 | Float | Int | Uint }) => {
+const ColorUI = ({ node }: { node: Color }) => {
+  const pane = useRef<Pane>();
+  const ref = useRef<HTMLDivElement>(null);
+
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    pane.current = new Pane({ container: ref.current, expanded: true });
+    const PARAMS = {
+      key: '#000000',
+    };
+
+    const bind = pane.current.addBinding(PARAMS, 'key', {
+      picker: 'inline',
+      expanded: true,
+      label: "",
+    });
+
+
+    let t: number
+    bind.on("change", (e) => {
+      clearTimeout(t)
+      t = setTimeout(() => {
+        node.setValue(e.value)
+      }, 300)
+    })
+
+    const subs = node._value.subscribe((hexColor) => {
+
+
+      if (PARAMS.key !== hexColor) {
+        PARAMS.key = hexColor
+        pane.current?.refresh();
+      }
+
+    })
+
+
+
+    return () => {
+      subs.unsubscribe();
+      clearTimeout(t)
+      pane.current?.dispose();
+    };
+  }, []);
+
+  return <div
+    ref={ref}
+    style={{
+      color: "var(--text-neutral-color)",
+      backgroundColor: "var(--node-background)",
+      borderBottom: "2px solid var(--border-color)",
+      padding: "14px 12px 12px",
+    }}
+  />
+}
+
+const UVUI = ({ node }: { node: UV }) => {
+  const pane = useRef<Pane>();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    pane.current = new Pane({ container: ref.current, expanded: true });
+    const PARAMS = {
+      UVIndex: "0",
+    };
+
+    const bind = pane.current.addBinding(PARAMS, 'UVIndex', {
+      expanded: true,
+      options: {
+        0: "0",
+        1: "1",
+        2: "2",
+        3: "3",
+        4: "4",
+        5: "5",
+        6: "6",
+        7: "7"
+      }
+    });
+
+
+    bind.on("change", (e) => {
+      node.setValue(Number(e.value))
+    })
+
+    const subs = node._value.subscribe((index) => {
+      const value = String(index)
+
+      if (PARAMS.UVIndex !== value) {
+        PARAMS.UVIndex = value
+        pane.current?.refresh();
+      }
+
+    })
+
+    return () => {
+      subs.unsubscribe();
+      pane.current?.dispose();
+    };
+  }, []);
+
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        color: "var(--text-neutral-color)",
+        backgroundColor: "var(--node-background)",
+        borderBottom: "2px solid var(--border-color)",
+        padding: "14px 12px 12px",
+      }}
+    />
+  );
+}
+
+const VecUI = ({ node }: { node: Vec3 | Vec4 | Vec2 | Float | Int | Uint | Mat2 | Mat3 | Mat4 | IVec2 | IVec3 | IVec4 | UVec2 | UVec3 | UVec4 | BVec2 | BVec3 | BVec4 }) => {
   const pane = useRef<Pane>();
 
   useEffect(() => {
@@ -149,16 +329,16 @@ const UniformUI = ({
     const initialInputs =
       node instanceof Vec2Uniform
         ? {
-            x: 0,
-            y: 0,
-          }
+          x: node._value.x,
+          y: node._value.y,
+        }
         : node instanceof Vec3Uniform
-        ? {
-            x: 0,
-            y: 0,
-            z: 0,
+          ? {
+            x: node._value.x,
+            y: node._value.y,
+            z: node._value.z
           }
-        : { x: 0 };
+          : { x: node._value.value };
 
     pane.current = new Pane({ container: ref.current, expanded: true });
 
@@ -288,12 +468,12 @@ const MeshStandardMaterialUI = ({
   }, []);
 
   useEffect(() => {
-    const colorNodeSubs = node.inputs.colorNode.subscribe((value) => {
+    const colorNodeSubs = node.inputs.colorNode?.subscribe((value) => {
       const colorNode = Fn(value)
       experienceRef.current?.updateNode("colorNode", colorNode);
     });
 
-    const positionNodeSubs = node.inputs.positionNode.subscribe((value) => {
+    const positionNodeSubs = node.inputs.positionNode?.subscribe((value) => {
       const positionNode = Fn(value)
       experienceRef.current?.updateNode("positionNode", positionNode);
     });
@@ -343,7 +523,7 @@ const MeshStandardMaterialUI = ({
       };
 
       const pushNodeToTree = (currentNode: Node, parentNode: TreeNodeType, traceInput?: string) => {
-        const currentInputs: Input[] = traceInput ? Object.keys(currentNode.inputs).filter(inputName => inputName === traceInput).map(name => currentNode.inputs[name]).filter(input => input !== null || input !== undefined)  :  Object.values(currentNode.inputs) ;
+        const currentInputs: Input[] = traceInput ? Object.keys(currentNode.inputs).filter(inputName => inputName === traceInput).map(name => currentNode.inputs[name]).filter(input => input !== null || input !== undefined) : Object.values(currentNode.inputs);
 
         currentInputs.map((currentInput) => {
           const connection = currentInput.connection;
@@ -455,7 +635,26 @@ function App() {
   const nodeWindowResolver = useNodeWindowResolver();
 
   useLayoutEffect(() => {
+    
+
+    EditorEventEmitter.on("changed", () => {
+      store.save()
+    })
+
+    store.loadFromJson();
+
+    // const t = setInterval(() => {
+    //   nodes.forEach(([node], i) => {
+    //     let toggleVisibility = node.visible ? store.hideNode : store.unHideNode
+
+    //     if(node.name !== "MeshStandardMaterialNode" && i % 2 === 0){
+    //       node.visible ? store.hideNode(node.id) : store.unHideNode(node.id)
+    //     }
+    //   })
+    // }, 3000)
+
     return () => {
+      EditorEventEmitter.removeAllListeners("changed");
       store.dispose();
     };
   }, []);
@@ -465,8 +664,13 @@ function App() {
 
     if (!nodeCanvas) return;
     const nodeCanvasEle = nodeCanvas as HTMLDivElement;
+    const settings = localStorage.getItem("editor-settings")
+    if (settings) {
+      const parsedSettings = JSON.parse(settings)
+      currentScale = parsedSettings.currentScale
+      currentTranslate = parsedSettings.currentTranslate
+    }
 
-    let currentTranslate = { x: 0, y: 0 };
     let panning = false;
 
     nodeCanvasEle.style.transformOrigin = "center";
@@ -666,8 +870,6 @@ function App() {
       title: "Custom",
     });
 
-    // console.log(CustomNodesFolder);
-
     const btn = CustomNodesFolder.addButton({
       title: "Create Custom Node",
     });
@@ -691,6 +893,17 @@ function App() {
       pane.current.dispose();
     };
   }, []);
+
+  const save = () => {
+    const serializedNodes: NodeSerialized[] = []
+    store.nodes.forEach(node => {
+      const pos = store.nodePositions.get(node.id)
+      if (!pos) throw new Error("No position found for node")
+      serializedNodes.push({ ...node.serialize(), position: { x: pos.x, y: pos.y } })
+    })
+    localStorage.setItem("nodes", JSON.stringify(serializedNodes))
+    localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
+  }
 
   // const codeBlockRef = useRef<HTMLDivElement>(null);
 
@@ -723,10 +936,10 @@ function App() {
     <>
       {customNodeForm && (
         <div className="popup-overlay">
-        <div className="popup-container">
-          <div className="popup-header">
-            <h2 className="popup-title">Add Node</h2>
-          </div>
+          <div className="popup-container">
+            <div className="popup-header">
+              <h2 className="popup-title">Add Node</h2>
+            </div>
             <div className="form-group">
               <label htmlFor="nodeName" className="form-label">
                 Node Name:
@@ -757,32 +970,31 @@ function App() {
                 Cancel
               </button>
               <button
-              onClick={() => {
-                const name  = nameInputRef.current?.value
-                const code = nodeCodeInputRef.current?.value
-                console.log(name, code);
-                
-                if (!name || !code) return
-                try {
-                  const Node = createCustomNode(code, name)
+                onClick={() => {
+                  const name = nameInputRef.current?.value
+                  const code = nodeCodeInputRef.current?.value
 
-                  store.setNodes([
-                    [
-                      new Node(),
-                      {x: 0, y: 0},
-                    ],
-                  ]);
-                  setCustomNodeForm(false)
-                } catch (e) {
-                  console.log(e)
-                }
-              }}
-               className="button button-primary">
+                  if (!name || !code) return
+                  try {
+                    const Node = createCustomNode(code, name)
+
+                    store.setNodes([
+                      [
+                        new Node(),
+                        { x: 0, y: 0 },
+                      ],
+                    ]);
+                    setCustomNodeForm(false)
+                  } catch (e) {
+                    console.log(e)
+                  }
+                }}
+                className="button button-primary">
                 Add
               </button>
             </div>
+          </div>
         </div>
-      </div>
       )}
       <div
         style={{
@@ -848,7 +1060,6 @@ function App() {
             const node = pool[name];
             if (!node) return;
             const nodeInstance = new node();
-            console.log(currentScale);
 
             store.setNodes([
               [
@@ -866,6 +1077,31 @@ function App() {
             store={store}
             nodeWindowResolver={nodeWindowResolver}
           />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            position: "absolute",
+            right: 0,
+            top: 0,
+            zIndex: 100000000,
+            padding: "10px",
+          }}
+        >
+          <button
+            onClick={() => {
+              const serializedNodes: NodeSerialized[] = []
+              store.nodes.forEach(node => {
+                const pos = store.nodePositions.get(node.id)
+                if (!pos) throw new Error("No position found for node")
+                serializedNodes.push({ ...node.serialize(), position: { x: pos.x, y: pos.y } })
+              })
+              localStorage.setItem("nodes", JSON.stringify(serializedNodes))
+              localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
+            }}
+          >Serialize</button>
         </div>
       </div>
     </>

@@ -143,13 +143,16 @@ class EventEmitter<T extends EventMap> {
   }
 }
 
+export type SAVE_STATE_TYPE ="UNSAVED CHANGES" | "SAVING" | "SAVED"
+
 // Example usage:
 interface EditorEvents {
   // nodeSelected: { nodeId: string; position: { x: number; y: number } };
   // nodeDeleted: { nodeId: string };
   // connectionCreated: { sourceId: string; targetId: string };
   // Add more event types as needed
-  changed: void
+  changed: void;
+  saveStateChanged : {state: SAVE_STATE_TYPE}
 }
 
 export const EditorEventEmitter = new EventEmitter<EditorEvents>();

@@ -45,7 +45,7 @@ import {
   Vec2Uniform,
   Vec3Uniform,
 } from "./nodes/UniformNodes";
-import { createVarNameForNode, EditorEventEmitter } from "./nodes/utils";
+import { createVarNameForNode, EditorEventEmitter, SAVE_STATE_TYPE } from "./nodes/utils";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import "highlight.js/styles/atom-one-dark.css";
@@ -633,12 +633,16 @@ const clamp = (value: number, min: number, max: number) => {
 
 function App() {
   const nodeWindowResolver = useNodeWindowResolver();
-
+  const [saveState, setSaveState] = useState<SAVE_STATE_TYPE>("SAVED");
   useLayoutEffect(() => {
     
 
     EditorEventEmitter.on("changed", () => {
       store.save()
+    })
+
+    EditorEventEmitter.on("saveStateChanged", (data) => {
+      setSaveState(data.state)
     })
 
     store.loadFromJson();
@@ -655,6 +659,7 @@ function App() {
 
     return () => {
       EditorEventEmitter.removeAllListeners("changed");
+      EditorEventEmitter.removeAllListeners("saveStateChanged");
       store.dispose();
     };
   }, []);
@@ -1092,16 +1097,53 @@ function App() {
         >
           <button
             onClick={() => {
-              const serializedNodes: NodeSerialized[] = []
-              store.nodes.forEach(node => {
-                const pos = store.nodePositions.get(node.id)
-                if (!pos) throw new Error("No position found for node")
-                serializedNodes.push({ ...node.serialize(), position: { x: pos.x, y: pos.y } })
-              })
-              localStorage.setItem("nodes", JSON.stringify(serializedNodes))
-              localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
+              store.save();
             }}
-          >Serialize</button>
+            style={{
+              backgroundColor: "var(--node-background)",
+              color: "var(--text-neutral-color)",
+              border: "1px solid var(--border-color)",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              cursor: saveState === "SAVING" ? "not-allowed" : "pointer",
+              fontSize: "14px",
+              fontFamily: "'Inter', sans-serif",
+              transition: "all 0.2s ease",
+              opacity: saveState === "SAVING" ? 0.7 : 1,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}
+            disabled={saveState === "SAVING"}
+            onMouseOver={(e) => {
+              if (saveState !== "SAVING") {
+                e.currentTarget.style.backgroundColor = "var(--border-color)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--node-background)";
+              e.currentTarget.style.transform = "none";
+            }}
+          >
+            {saveState === "SAVING" ? (
+              <>
+                <span>Saving...</span>
+                <div style={{
+                  width: "12px",
+                  height: "12px",
+                  border: "2px solid var(--text-neutral-color)",
+                  borderTopColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite"
+                }} />
+              </>
+            ) : saveState === "UNSAVED CHANGES" ? (
+              "Save Changes"
+            ) : (
+              "Saved"
+            )}
+          </button>
         </div>
       </div>
     </>

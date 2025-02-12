@@ -14,6 +14,7 @@ import {
 } from "./CircuitStore.types";
 import { currentScale, currentTranslate, getNodeByName } from "../../../App";
 import { createCustomNode } from "../../../nodes/CustomNode";
+import { EditorEventEmitter } from "../../../nodes/utils";
 
 export class CircuitStore {
   /** Associated Nodes */
@@ -67,6 +68,7 @@ export class CircuitStore {
 
   /** Sets the associated nodes */
   public setNodes(nodesWithPosition: NodeWithPosition[]) {
+    EditorEventEmitter.emit("saveStateChanged", {state: "UNSAVED CHANGES"})
     for (const [node, position] of nodesWithPosition) {
       if(node.visible){
         this.nodes.push(node);
@@ -120,6 +122,7 @@ export class CircuitStore {
 
   /** Removes a node from the store */
   public removeNode(nodeId: Node["id"]) {
+    EditorEventEmitter.emit("saveStateChanged", {state: "UNSAVED CHANGES"})
     this.nodes = this.nodes.filter((node) => node.id !== nodeId);
     this.nodeElements.delete(nodeId);
     this.nodePositions.delete(nodeId);
@@ -160,7 +163,6 @@ export class CircuitStore {
       const connection = this.draftConnectionSource.connect(target);
 
       this.setDraftConnectionSource(null);
-      this.save();
       return connection;
     }
   }
@@ -267,7 +269,8 @@ export class CircuitStore {
   }
 
   private serialize = () => {
-    console.log("SAVING...");
+    EditorEventEmitter.emit("saveStateChanged", {state: "SAVING"})
+
     
     const serializedNodes: NodeSerialized[] = []
     this.nodes.forEach(node => {
@@ -279,7 +282,7 @@ export class CircuitStore {
     localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
     
     this._unsavedChanges = false;
-    console.log("SAVED!!!");
+    EditorEventEmitter.emit("saveStateChanged", {state: "SAVED"})
   }
 
   public save = () => {

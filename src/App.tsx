@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Experience } from "./components/Experience";
-import { Input, Node, NodeSerialized } from "./nodl-core";
+import { Input, Node } from "./nodl-core";
 import "./App.css";
 import { MaterialNodes, MeshStandardMaterialNode } from "./nodes/MaterialNodes";
 import { Circuit, CircuitStore } from "./nodl-react";
@@ -465,6 +465,16 @@ const MeshStandardMaterialUI = ({
       width: boundBox.width * (1 / currentScale),
       height: boundBox.height * (1 / currentScale),
     });
+
+    const subs = EditorEventEmitter.on("selectionChanged", ({nodes}) => {
+      if(nodes?.includes(node)){
+        experienceRef.current?.startRendering()
+      }else{
+        experienceRef.current?.stopRendering()
+      }
+    })
+
+    return () => subs();
   }, []);
 
   useEffect(() => {

@@ -114,11 +114,14 @@ interface EventMap {
 class EventEmitter<T extends EventMap> {
   private events: { [K in keyof T]?: Array<(data: T[K]) => void> } = {};
 
-  public on<K extends keyof T>(event: K, callback: (data: T[K]) => void): void {
+  public on<K extends keyof T>(event: K, callback: (data: T[K]) => void): () => void {
     if (!this.events[event]) {
       this.events[event] = [];
     }
     this.events[event]!.push(callback);
+    return () => {
+      this.off(event, callback)
+    }
   }
 
   public off<K extends keyof T>(event: K, callback: (data: T[K]) => void): void {
@@ -153,6 +156,7 @@ interface EditorEvents {
   // Add more event types as needed
   changed: void;
   saveStateChanged : {state: SAVE_STATE_TYPE}
+  selectionChanged: {nodes : Node[] | null}
 }
 
 export const EditorEventEmitter = new EventEmitter<EditorEvents>();

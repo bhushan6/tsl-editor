@@ -170,6 +170,7 @@ export class CircuitStore {
   /** Selects the given nodes */
   public selectNodes(nodes: Node[]): void {
     this.selectedNodes = nodes;
+    EditorEventEmitter.emit("selectionChanged", {nodes: nodes})
   }
 
   /** Sets the selection bounds */
@@ -325,7 +326,9 @@ export class CircuitStore {
 
         nodes.push([nodeInstance, nodePosition])
 
+        //@ts-expect-error 
         if (element.internalValue && nodeInstance.deserialize) {
+          //@ts-expect-error 
           nodeInstance.deserialize(element.internalValue);
         }
 
@@ -342,9 +345,8 @@ export class CircuitStore {
             connectionMap.set(id, data.fromId)
             inputNodeMap.set(id, { node: nodeInstance, name: inputKey })
           } else if (type === "PRIMITIVE") {
-            if (nodeInstance.setValue) {
-              // nodeInstance.setValue(data)
-            } else {
+
+            if (!nodeInstance.setValue) {
               nodeInstance.inputs[inputKey].next(() => data)
             }
           } else if (type === "NODE") {

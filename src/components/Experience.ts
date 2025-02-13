@@ -46,7 +46,7 @@ export class Experience {
       this._renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    this._renderer.setAnimationLoop(this.animate);
+    // this._renderer.setAnimationLoop(this.animate);
 
     this._controls = new OrbitControls(this._camera, this._renderer.domElement);
     this._controls.enableDamping = true;
@@ -102,6 +102,9 @@ export class Experience {
       
       this._boxMaterial[nodeName] = node();
       this._boxMaterial.needsUpdate = true;
+
+      this._renderer.render(this._scene, this._camera);
+      
     }
   };
 
@@ -119,8 +122,25 @@ export class Experience {
     }
   };
 
+
+  private _currentAnimationFrame: number | null = null;
+
   private animate = () => {
     this._controls.update();
     this._renderer.render(this._scene, this._camera);
+    this._currentAnimationFrame = requestAnimationFrame(this.animate);
   };
+
+  public startRendering() {
+    if (this._currentAnimationFrame === null) {
+      this.animate();
+    }
+  }
+
+  public stopRendering() {
+    if (this._currentAnimationFrame !== null) {
+      cancelAnimationFrame(this._currentAnimationFrame);
+      this._currentAnimationFrame = null;
+    }
+  }
 }

@@ -36,7 +36,7 @@ import {
 import { PositionNodes } from "./nodes/PositionNodes";
 import { toCartesianPoint } from "./nodl-react/utils/coordinates/coordinates";
 import { Subscription } from "rxjs";
-import { MathNodes, Mul } from "./nodes/MathNodes";
+import {  isOperatorNode, MathNodes } from "./nodes/MathNodes";
 import { AttributeNodes, UV } from "./nodes/AttributeNodes";
 import {
   FloatUniform,
@@ -131,7 +131,7 @@ const useNodeWindowResolver = () => {
       return <ColorUI node={node} />
     } else if (node instanceof UV) {
       return <UVUI node={node} />
-    } else if (node instanceof Mul) {
+    } else if (isOperatorNode(node)) {
       return <MathOperatorUI node={node} />
     } else {
       return null
@@ -258,7 +258,7 @@ const UVUI = ({ node }: { node: UV }) => {
   );
 }
 
-const MathOperatorUI = ({ node }: { node: Mul }) => {
+const MathOperatorUI = ({ node }) => {
   const pane = useRef<Pane>();
 
   useEffect(() => {

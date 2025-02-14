@@ -33,995 +33,392 @@ import {
 import { combineLatest, map } from "rxjs";
 import { createVarNameForNode, evaluateInputs } from "./utils";
 
-const AddInputSchema = schema(z.any());
-
-export class Add extends Node {
-  name = "Add";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: AddInputSchema,
-      defaultValue: () => 0,
-    }),
-    b: new Input({
-      name: "Value2",
-      type: AddInputSchema,
-      defaultValue: () => 0,
-    }),
-  };
-
-
-
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: AddInputSchema,
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, add))
-      ),
-    }),
-  };
-
-  public code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? "0" : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = add(${argsString})`,
-      dependencies: ["add"],
-    };
-  };
+// Type system for operator checking
+export interface IOperatorNode {
+  isOperator: true;
 }
 
-export class Mul extends Node {
-  name = "Mul";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    b: new Input({
-      name: "Value2",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
+type InputConfig = {
+  name: string;
+  defaultValue: any;
+};
 
-  private _internalInputs  = Object.keys(this.inputs).reduce((acc, key) => {
-    acc[(key as keyof typeof this.inputs)] = {type : "FLOAT", value: {x: 0}}
-    return acc
-  }, {} as Record<keyof typeof this.inputs, {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}>)
+type NodeConfig = {
+  name: string;
+  inputs: Record<string, InputConfig>;
+  operation: Function;
+  defaultValues?: Record<string, number | number[]>;
+};
 
-  public setValue (inputKey: keyof typeof this.inputs, value: {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}) {
-    console.log({inputKey, value});
+function createOperatorNode(config: NodeConfig) {
+  return class OperatorNode extends Node implements IOperatorNode {
+    isOperator = true as const;
+    name = config.name;
     
-    const inputValues = Object.values(value.value)
-    const newValue = value.type === "FLOAT" ? () => inputValues[0] : value.type === "VEC2" ? ()  => vec2(...inputValues) : () => vec3(...inputValues)
-    console.log(newValue, inputValues);
-    console.log(this.inputs, inputKey);
-    
-    this.inputs[inputKey].next(newValue)
-    this._internalInputs[inputKey] = value
-  }
+    inputs = Object.entries(config.inputs).reduce((acc, [key, inputConfig]) => {
+      acc[key] = new Input({
+        name: inputConfig.name,
+        type: schema(z.any()),
+        defaultValue: () => inputConfig.defaultValue,
+      });
+      return acc;
+    }, {} as Record<string, Input>);
 
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, mul))
-      ),
-    }),
-  };
+    private _internalInputs = Object.keys(this.inputs).reduce((acc, key) => {
+      acc[(key as keyof typeof this.inputs)] = {
+        type: "FLOAT",
+        value: { x: config.defaultValues?.[key] ?? 0 }
+      };
+      return acc;
+    }, {} as Record<string, { type: "FLOAT" | "VEC2" | "VEC3", value: { x: number, y?: number, z?: number } }>);
 
-  public code = (args: string[]) => {
-    const argsString = Object.keys(this.inputs)
-      .map((inputKey, i) => {
-        const inKey = inputKey as keyof typeof this.inputs
-        const input = this.inputs[inKey]
-        if(!input.connected){
-          const internalValue = this._internalInputs[inKey]
-          if(internalValue.type === "FLOAT"){
-            return internalValue.value.x
-          } else if(internalValue.type === "VEC2"){
-            return `vec2(${internalValue.value.x}, ${internalValue.value.y})`
-          } else if(internalValue.type === "VEC3"){
-            return `vec3(${internalValue.value.x}, ${internalValue.value.y}, ${internalValue.value.z})`
-          } else{
-            throw new Error(`Unhandled internal value type (${internalValue.type}) in ${this.name} node`)
-          }
-        }
-        return args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = mul(${argsString})`,
-      dependencies: ["mul", "vec2", "vec3"],
-    };
-  };
+    public setValue(inputKey: keyof typeof this.inputs, value: { 
+      type: "FLOAT" | "VEC2" | "VEC3", 
+      value: { x: number, y?: number, z?: number } 
+    }) {
+      const inputValues = Object.values(value.value);
+      const newValue = value.type === "FLOAT" ? () => inputValues[0] :
+        value.type === "VEC2" ? () => vec2(...inputValues) :
+        () => vec3(...inputValues);
 
-  public serialize() {
-    const base = super.serialize();
-    const internalValue = Object.keys(this.inputs).reduce((acc, key) => {
-      const inKey = key as keyof typeof this.inputs
-      if(!this.inputs[inKey].connected){
-        acc[inKey] = this._internalInputs[inKey]
-      }
-      return acc
-    }, {} as Record<keyof typeof this.inputs, {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}>)
-    
-    base.internalValue = JSON.stringify(internalValue);    
-    return base;
-  }
-
-  public deserialize(data: string) {
-    try {
-      const parsedData = JSON.parse(data) as  Record<keyof typeof this.inputs, {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}>;
-      
-      Object.keys(parsedData).forEach((inputKey) => {
-        const inKey = inputKey as keyof typeof this.inputs
-        
-        this.setValue(inKey, parsedData[inKey])
-      })
-    } catch(e) {
-      console.error(e);
+      this.inputs[inputKey].next(newValue);
+      this._internalInputs[inputKey] = value;
     }
+
+    outputs = {
+      output: new Output({
+        name: "Output",
+        type: schema(z.any()),
+        observable: combineLatest([...Object.values(this.inputs)]).pipe(
+          map((inputs) => evaluateInputs(inputs, config.operation))
+        ),
+      }),
+    };
+
+    public code = (args: string[]) => {
+      const argsString = Object.keys(this.inputs)
+        .map((inputKey, i) => {
+          const inKey = inputKey as keyof typeof this.inputs;
+          const input = this.inputs[inKey];
+          if (!input.connected) {
+            const internalValue = this._internalInputs[inKey];
+            if (internalValue.type === "FLOAT") {
+              return internalValue.value.x;
+            } else if (internalValue.type === "VEC2") {
+              return `vec2(${internalValue.value.x}, ${internalValue.value.y})`;
+            } else if (internalValue.type === "VEC3") {
+              return `vec3(${internalValue.value.x}, ${internalValue.value.y}, ${internalValue.value.z})`;
+            }
+          }
+          return args[i];
+        })
+        .filter((arg) => arg !== undefined && arg !== null)
+        .join(", ");
+      
+      const varName = createVarNameForNode(this);
+      return {
+        code: `const ${varName} = ${config.operation.name}(${argsString})`,
+        dependencies: [config.operation.name, "vec2", "vec3"],
+      };
+    };
+
+    public serialize() {
+      const base = super.serialize();
+      const internalValue = Object.keys(this.inputs).reduce((acc, key) => {
+        const inKey = key as keyof typeof this.inputs;
+        if (!this.inputs[inKey].connected) {
+          acc[inKey] = this._internalInputs[inKey];
+        }
+        return acc;
+      }, {} as Record<string, { type: "FLOAT" | "VEC2" | "VEC3", value: { x: number, y?: number, z?: number } }>);
+
+      base.internalValue = JSON.stringify(internalValue);
+      return base;
+    }
+
+    public deserialize(data: string) {
+      try {
+        const parsedData = JSON.parse(data) as Record<string, {
+          type: "FLOAT" | "VEC2" | "VEC3",
+          value: { x: number, y?: number, z?: number }
+        }>;
+
+        Object.keys(parsedData).forEach((inputKey) => {
+          const inKey = inputKey as keyof typeof this.inputs;
+          this.setValue(inKey, parsedData[inKey]);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+}
+
+// Helper function to check if a node is an operator
+export function isOperatorNode(node: Node): node is Node & IOperatorNode {
+  return 'isOperator' in node && node.isOperator === true;
+}
+
+export const Add = createOperatorNode({
+  name: "Add",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 },
+    b: { name: "Value2", defaultValue: 0 }
+  },
+  operation: add
+});
+
+export const Sub = createOperatorNode({
+  name: "Sub",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 },
+    b: { name: "Value2", defaultValue: 0 }
+  },
+  operation: sub
+});
+
+export const Mul = createOperatorNode({
+  name: "Mul",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 },
+    b: { name: "Value2", defaultValue: 0 }
+  },
+  operation: mul
+});
+
+export const Div = createOperatorNode({
+  name: "Div",
+  inputs: {
+    a: { name: "Value", defaultValue: 1 },
+    b: { name: "Value2", defaultValue: 1 }
+  },
+  operation: div,
+  defaultValues: {
+    a: 1,
+    b: 1
   }
-}
+});
 
-export class Sub extends Node {
-  name = "Sub";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    b: new Input({
-      name: "Value2",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, sub))
-      ),
-    }),
-  };
-  public code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = sub(${argsString})`,
-      dependencies: ["sub"],
-    };
-  };
-}
+// Trigonometric functions
+export const Sin = createOperatorNode({
+  name: "Sin",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: sin
+});
 
-export class Div extends Node {
-  name = "Div";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-    b: new Input({
-      name: "Value2",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, div))
-      ),
-    }),
-  };
-  public code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = div(${argsString})`,
-      dependencies: ["div"],
-    };
-  };
-}
+export const Cos = createOperatorNode({
+  name: "Cos",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: cos
+});
 
-//create Nodes for above functions
-export class Abs extends Node {
-  name = "Abs";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, abs))
-      ),
-    }),
-  };
-  public code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = abs(${argsString})`,
-      dependencies: ["abs"],
-    };
-  };
-}
+export const Asin = createOperatorNode({
+  name: "Asin",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: asin
+});
 
+export const Acos = createOperatorNode({
+  name: "Acos",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: acos
+});
 
-export class Acos extends Node {
-  name = "Acos";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, acos))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = acos(${argsString})`,
-      dependencies: ["acos"],
-    };
-  };
-}
+export const Atan = createOperatorNode({
+  name: "Atan",
+  inputs: {
+    y: { name: "Y", defaultValue: 0 },
+    x: { name: "X", defaultValue: 0 }
+  },
+  operation: atan2
+});
 
-export class Asin extends Node {
-  name = "Asin";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, asin))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = asin(${argsString})`,
-      dependencies: ["asin"],
-    };
-  };
-}
+// Vector operations
+export const Cross = createOperatorNode({
+  name: "Cross",
+  inputs: {
+    x: { name: "Vector A", defaultValue: [0, 0, 0] },
+    y: { name: "Vector B", defaultValue: [0, 0, 0] }
+  },
+  operation: cross,
+  defaultValues: {
+    x: 0,
+    y: 0
+  }
+});
 
-export class Atan extends Node {
-  name = "Atan";
-  inputs = {
-    y: new Input({
-      name: "Y",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    x: new Input({
-      name: "X",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, atan2))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = atan2(${argsString})`,
-      dependencies: ["atan2"],
-    };
-  };
-}
+export const Dot = createOperatorNode({
+  name: "Dot",
+  inputs: {
+    x: { name: "Vector A", defaultValue: [0, 0, 0] },
+    y: { name: "Vector B", defaultValue: [0, 0, 0] }
+  },
+  operation: dot,
+  defaultValues: {
+    x: 0,
+    y: 0
+  }
+});
 
-export class Clamp extends Node {
-  name = "Clamp";
-  inputs = {
-    x: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    min: new Input({
-      name: "Min",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    max: new Input({
-      name: "Max",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, clamp))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = clamp(${argsString})`,
-      dependencies: ["clamp"],
-    };
-  };
-}
+export const Normalize = createOperatorNode({
+  name: "Normalize",
+  inputs: {
+    x: { name: "Vector", defaultValue: [0, 0, 0] }
+  },
+  operation: normalize,
+  defaultValues: {
+    x: 0
+  }
+});
 
-export class Ceil extends Node {
-  name = "Ceil";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
+export const Length = createOperatorNode({
+  name: "Length",
+  inputs: {
+    a: { name: "Vector", defaultValue: 0 }
+  },
+  operation: length
+});
 
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, ceil))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = ceil(${argsString})`,
-      dependencies: ["ceil"],
-    };
-  };
-}
+export const Distance = createOperatorNode({
+  name: "Distance",
+  inputs: {
+    x: { name: "Point A", defaultValue: 0 },
+    y: { name: "Point B", defaultValue: 0 }
+  },
+  operation: distance
+});
 
-export class Cos extends Node {
-  name = "Cos";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, cos))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = cos(${argsString})`,
-      dependencies: ["cos"],
-    };
-  };
-}
+// Mathematical functions
+export const Abs = createOperatorNode({
+  name: "Abs",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: abs
+});
 
-export class Sin extends Node {
-  name = "Sin";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, sin))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = sin(${argsString})`,
-      dependencies: ["sin"],
-    };
-  };
-}
+export const Sqrt = createOperatorNode({
+  name: "Sqrt",
+  inputs: {
+    x: { name: "Value", defaultValue: 1 }
+  },
+  operation: sqrt,
+  defaultValues: {
+    x: 1
+  }
+});
 
-export class Cross extends Node {
-  name = "Cross";
-  inputs = {
-    x: new Input({
-      name: "Vector A",
-      type: schema(z.any()),
-      defaultValue: () => [0, 0, 0],
-    }),
-    y: new Input({
-      name: "Vector B",
-      type: schema(z.any()),
-      defaultValue: () => [0, 0, 0],
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, cross))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = cross(${argsString})`,
-      dependencies: ["cross"],
-    };
-  };
-}
+export const Pow = createOperatorNode({
+  name: "Pow",
+  inputs: {
+    x: { name: "Base", defaultValue: 1 },
+    y: { name: "Exponent", defaultValue: 1 }
+  },
+  operation: pow,
+  defaultValues: {
+    x: 1,
+    y: 1
+  }
+});
 
-export class Mod extends Node {
-  name = "Mod";
-  inputs = {
-    x: new Input({
-      name: "Vector A",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    y: new Input({
-      name: "Vector B",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, mod))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? "0" : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = mod(${argsString})`,
-      dependencies: ["mod"],
-    };
-  };
-}
+export const Pow2 = createOperatorNode({
+  name: "Pow2",
+  inputs: {
+    x: { name: "Value", defaultValue: 1 }
+  },
+  operation: pow2,
+  defaultValues: {
+    x: 1
+  }
+});
 
-export class Degrees extends Node {
-  name = "Degrees";
-  inputs = {
-    a: new Input({
-      name: "Radians",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, degrees))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = degrees(${argsString})`,
-      dependencies: ["degrees"],
-    };
-  };
-}
+export const Log = createOperatorNode({
+  name: "Log",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: log
+});
 
-export class Distance extends Node {
-  name = "Distance";
-  inputs = {
-    x: new Input({
-      name: "Point A",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    y: new Input({
-      name: "Point B",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, distance))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? `0` : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = distance(${argsString})`,
-      dependencies: ["distance"],
-    };
-  };
-}
+export const Floor = createOperatorNode({
+  name: "Floor",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: floor
+});
 
-export class Dot extends Node {
-  name = "Dot";
-  inputs = {
-    x: new Input({
-      name: "Vector A",
-      type: schema(z.any()),
-      defaultValue: () => [0, 0, 0],
-    }),
-    y: new Input({
-      name: "Vector B",
-      type: schema(z.any()),
-      defaultValue: () => [0, 0, 0],
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, dot))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? `0` : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = dot(${argsString})`,
-      dependencies: ["dot"],
-    };
-  };
-}
+export const Ceil = createOperatorNode({
+  name: "Ceil",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: ceil
+});
 
-export class Floor extends Node {
-  name = "Floor";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, floor))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? `0` : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = floor(${argsString})`,
-      dependencies: ["floor"],
-    };
-  };
-}
+export const Fract = createOperatorNode({
+  name: "Fract",
+  inputs: {
+    a: { name: "Value", defaultValue: 0 }
+  },
+  operation: fract
+});
 
-export class Fract extends Node {
-  name = "Fract";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, fract))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? `0` : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = fract(${argsString})`,
-      dependencies: ["fract"],
-    };
-  };
-}
+// Conversion and utility functions
+export const Degrees = createOperatorNode({
+  name: "Degrees",
+  inputs: {
+    a: { name: "Radians", defaultValue: 0 }
+  },
+  operation: degrees
+});
 
-export class Length extends Node {
-  name = "Length";
-  inputs = {
-    a: new Input({
-      name: "Vector",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, length))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? `0` : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = length(${argsString})`,
-      dependencies: ["length"],
-    };
-  };
-}
+export const Mod = createOperatorNode({
+  name: "Mod",
+  inputs: {
+    x: { name: "Vector A", defaultValue: 0 },
+    y: { name: "Vector B", defaultValue: 0 }
+  },
+  operation: mod
+});
 
-export class Log extends Node {
-  name = "Log";
-  inputs = {
-    a: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, log))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? `0` : args[i];
-      })
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = log(${argsString})`,
-      dependencies: ["log"],
-    };
-  };
-}
+export const Mix = createOperatorNode({
+  name: "Mix",
+  inputs: {
+    x: { name: "Value A", defaultValue: 0 },
+    y: { name: "Value B", defaultValue: 1 },
+    a: { name: "Alpha", defaultValue: 0.5 }
+  },
+  operation: mix,
+  defaultValues: {
+    x: 0,
+    y: 1,
+    a: 0.5
+  }
+});
 
-export class Pow extends Node {
-  name = "Pow";
-  inputs = {
-    x: new Input({
-      name: "Base",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-    y: new Input({
-      name: "Exponent",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, pow))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => !input.connected ? "1" : args[i])
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = pow(${argsString})`,
-      dependencies: ["pow"],
-    };
-  };
-}
-
-export class Pow2 extends Node {
-  name = "Pow2";
-  inputs = {
-    x: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, pow2))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => !input.connected ? "1" : args[i])
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = pow2(${argsString})`,
-      dependencies: ["pow2"],
-    };
-  };
-}
-
-export class Sqrt extends Node {
-  name = "Sqrt";
-  inputs = {
-    x: new Input({
-      name: "Value",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, sqrt))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => !input.connected ? "1" : args[i])
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = sqrt(${argsString})`,
-      dependencies: ["sqrt"],
-    };
-  };
-}
-
-export class Mix extends Node {
-  name = "Mix";
-  inputs = {
-    x: new Input({
-      name: "Value A",
-      type: schema(z.any()),
-      defaultValue: () => 0,
-    }),
-    y: new Input({
-      name: "Value B",
-      type: schema(z.any()),
-      defaultValue: () => 1,
-    }),
-    a: new Input({
-      name: "Alpha",
-      type: schema(z.any()),
-      defaultValue: () => 0.5,
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, mix))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => !input.connected ? (i === 2 ? "0.5" : i === 1 ? "1" : "0") : args[i])
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = mix(${argsString})`,
-      dependencies: ["mix"],
-    };
-  };
-}
-
-export class Normalize extends Node {
-  name = "Normalize";
-  inputs = {
-    x: new Input({
-      name: "Vector",
-      type: schema(z.any()),
-      defaultValue: () => [0, 0, 0],
-    }),
-  };
-  outputs = {
-    output: new Output({
-      name: "Output",
-      type: schema(z.any()),
-      observable: combineLatest([...Object.values(this.inputs)]).pipe(
-        map((inputs) => evaluateInputs(inputs, normalize))
-      ),
-    }),
-  };
-  code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => !input.connected ? "[0, 0, 0]" : args[i])
-      .filter((arg) => arg !== undefined && arg !== null)
-      .join(", ");
-    const varName = createVarNameForNode(this);
-    return {
-      code: `const ${varName} = normalize(${argsString})`,
-      dependencies: ["normalize"],
-    };
-  };
-}
-
-
+export const Clamp = createOperatorNode({
+  name: "Clamp",
+  inputs: {
+    x: { name: "Value", defaultValue: 0 },
+    min: { name: "Min", defaultValue: 0 },
+    max: { name: "Max", defaultValue: 1 }
+  },
+  operation: clamp,
+  defaultValues: {
+    x: 0,
+    min: 0,
+    max: 1
+  }
+});
 
 export const MathNodes = {
   Add,

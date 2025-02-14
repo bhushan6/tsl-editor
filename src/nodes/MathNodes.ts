@@ -27,6 +27,8 @@ import {
   sqrt,
   pow2,
   pow,
+  vec3,
+  vec2,
 } from "three/tsl";
 import { combineLatest, map } from "rxjs";
 import { createVarNameForNode, evaluateInputs } from "./utils";
@@ -47,6 +49,8 @@ export class Add extends Node {
       defaultValue: () => 0,
     }),
   };
+
+
 
   outputs = {
     output: new Output({
@@ -87,6 +91,24 @@ export class Mul extends Node {
       defaultValue: () => 0,
     }),
   };
+
+  private _internalInputs  = Object.keys(this.inputs).reduce((acc, key) => {
+    acc[(key as keyof typeof this.inputs)] = {type : "FLOAT", value: {x: 0}}
+    return acc
+  }, {} as Record<keyof typeof this.inputs, {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}>)
+
+  public setValue (inputKey: keyof typeof this.inputs, value: {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}) {
+    console.log({inputKey, value});
+    
+    const inputValues = Object.values(value.value)
+    const newValue = value.type === "FLOAT" ? () => inputValues[0] : value.type === "VEC2" ? ()  => vec2(...inputValues) : () => vec3(...inputValues)
+    console.log(newValue, inputValues);
+    console.log(this.inputs, inputKey);
+    
+    this.inputs[inputKey].next(newValue)
+    this._internalInputs[inputKey] = value
+  }
+
   outputs = {
     output: new Output({
       name: "Output",
@@ -96,19 +118,62 @@ export class Mul extends Node {
       ),
     }),
   };
+
   public code = (args: string[]) => {
-    const argsString = Object.values(this.inputs)
-      .map((input, i) => {
-        return !input.connected ? 0 : args[i];
+    const argsString = Object.keys(this.inputs)
+      .map((inputKey, i) => {
+        const inKey = inputKey as keyof typeof this.inputs
+        const input = this.inputs[inKey]
+        if(!input.connected){
+          const internalValue = this._internalInputs[inKey]
+          if(internalValue.type === "FLOAT"){
+            return internalValue.value.x
+          } else if(internalValue.type === "VEC2"){
+            return `vec2(${internalValue.value.x}, ${internalValue.value.y})`
+          } else if(internalValue.type === "VEC3"){
+            return `vec3(${internalValue.value.x}, ${internalValue.value.y}, ${internalValue.value.z})`
+          } else{
+            throw new Error(`Unhandled internal value type (${internalValue.type}) in ${this.name} node`)
+          }
+        }
+        return args[i];
       })
       .filter((arg) => arg !== undefined && arg !== null)
       .join(", ");
     const varName = createVarNameForNode(this);
     return {
       code: `const ${varName} = mul(${argsString})`,
-      dependencies: ["mul"],
+      dependencies: ["mul", "vec2", "vec3"],
     };
   };
+
+  public serialize() {
+    const base = super.serialize();
+    const internalValue = Object.keys(this.inputs).reduce((acc, key) => {
+      const inKey = key as keyof typeof this.inputs
+      if(!this.inputs[inKey].connected){
+        acc[inKey] = this._internalInputs[inKey]
+      }
+      return acc
+    }, {} as Record<keyof typeof this.inputs, {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}>)
+    
+    base.internalValue = JSON.stringify(internalValue);    
+    return base;
+  }
+
+  public deserialize(data: string) {
+    try {
+      const parsedData = JSON.parse(data) as  Record<keyof typeof this.inputs, {type: "FLOAT" | "VEC2" | "VEC3", value: {x: number, y?: number, z?: number}}>;
+      
+      Object.keys(parsedData).forEach((inputKey) => {
+        const inKey = inputKey as keyof typeof this.inputs
+        
+        this.setValue(inKey, parsedData[inKey])
+      })
+    } catch(e) {
+      console.error(e);
+    }
+  }
 }
 
 export class Sub extends Node {

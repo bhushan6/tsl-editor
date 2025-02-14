@@ -36,7 +36,7 @@ import {
 import { PositionNodes } from "./nodes/PositionNodes";
 import { toCartesianPoint } from "./nodl-react/utils/coordinates/coordinates";
 import { Subscription } from "rxjs";
-import { MathNodes } from "./nodes/MathNodes";
+import { MathNodes, Mul } from "./nodes/MathNodes";
 import { AttributeNodes, UV } from "./nodes/AttributeNodes";
 import {
   FloatUniform,
@@ -131,6 +131,8 @@ const useNodeWindowResolver = () => {
       return <ColorUI node={node} />
     } else if (node instanceof UV) {
       return <UVUI node={node} />
+    } else if (node instanceof Mul) {
+      return <MathOperatorUI node={node} />
     } else {
       return null
     }
@@ -255,6 +257,150 @@ const UVUI = ({ node }: { node: UV }) => {
     />
   );
 }
+
+const MathOperatorUI = ({ node }: { node: Mul }) => {
+  const pane = useRef<Pane>();
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const inputPortKeys = Object.keys(node.inputs) as (keyof typeof node.inputs)[];
+
+    const initValues = inputPortKeys.reduce((acc, key) => {
+      const value = node.inputs[key].value()
+      if (isNaN(value)) {
+        acc[key] = { x: 0, y: 0, z: 0 };
+      } else {
+        acc[key] = { x: value, y: 0, z: 0 };
+      }
+      return acc;
+    }, {} as Record<keyof typeof node.inputs, { x: number, y: number, z: number }>);
+
+    pane.current = new Pane({ container: ref.current, expanded: true });
+
+    const subs: Subscription[] = [];
+
+    const createSliders = (initialValue: { x: number, y: number, z: number }) => {
+      const xSlider = pane.current!.addBinding(initialValue, "x")
+      const ySlider = pane.current!.addBinding(initialValue, "y")
+      const zSlider = pane.current!.addBinding(initialValue, "z")
+      return { xSlider, ySlider, zSlider }
+    }
+
+    const enableUI = (uiEle: { binding: any, sliders: { xSlider: any, ySlider: any, zSlider: any } }, enable: boolean) => {
+      const { binding, sliders } = uiEle
+      binding!.disabled = enable;
+      sliders.xSlider.disabled = enable
+      sliders.ySlider.disabled = enable
+      sliders.zSlider.disabled = enable
+    }
+
+    inputPortKeys.forEach((key) => {
+      const binding = pane.current!.addBlade({
+        view: 'list',
+        label: key,
+        options: [
+          { text: 'FLOAT', value: 'FLOAT' },
+          { text: 'VEC2', value: 'VEC2' },
+          { text: 'VEC3', value: 'VEC3' },
+        ],
+        value: 'FLOAT',
+      }).on("change", (e) => {
+        if (e.value === "FLOAT") {
+          sliders.xSlider.hidden = false
+          sliders.ySlider.hidden = true
+          sliders.zSlider.hidden = true
+        } else if (e.value === "VEC2") {
+          sliders.xSlider.hidden = false
+          sliders.ySlider.hidden = false
+          sliders.zSlider.hidden = true
+        } else if (e.value === "VEC3") {
+          sliders.xSlider.hidden = false
+          sliders.ySlider.hidden = false
+          sliders.zSlider.hidden = false
+        }
+        node.setValue(key, { value: { x: initValues[key].x, y: initValues[key].y, z: initValues[key].z }, type: e.value })
+      })
+      const sliders = createSliders(initValues[key])
+
+      sliders.xSlider.on("change", (e) => {
+        node.setValue(key, { value: { x: e.value, y: initValues[key].y, z: initValues[key].z }, type: binding.value })
+      })
+
+      sliders.ySlider.on("change", (e) => {
+        node.setValue(key, { value: { x: initValues[key].x, y: e.value, z: initValues[key].z }, type: binding.value })
+      })
+
+      sliders.zSlider.on("change", (e) => {
+        node.setValue(key, { value: { x: initValues[key].x, y: initValues[key].y, z: e.value }, type: binding.value })
+      })
+
+      sliders.xSlider.hidden = false
+      sliders.ySlider.hidden = true
+      sliders.zSlider.hidden = true
+
+
+      const sub = node.inputs[key].subscribe(() => {
+
+        if (!node.inputs[key]?.connected) {
+          const currentValue = node.inputs[key].getValue()()
+          if (isNaN(currentValue)) {
+            console.log({ idasda: currentValue.value });
+
+            if (currentValue.nodeType === "vec2") {
+              initValues[key].x = currentValue.value.x
+              initValues[key].y = currentValue.value.y
+              binding.value = "VEC2"
+            } else if (currentValue.nodeType === "vec3") {
+              initValues[key].x = currentValue.value.x
+              initValues[key].y = currentValue.value.y
+              initValues[key].z = currentValue.value.z
+              binding.value = "VEC3"
+            }
+          } else {
+            initValues[key].x = currentValue
+            binding.value = "FLOAT"
+          }
+          // binding.refresh()
+          sliders.xSlider.refresh();
+          sliders.ySlider.refresh();
+          sliders.zSlider.refresh();
+          enableUI({ binding, sliders }, false)
+          return;
+        }
+        enableUI({ binding, sliders }, true)
+        initValues[key].x = 0
+        initValues[key].y = 0
+        initValues[key].z = 0
+        sliders.xSlider.refresh();
+        sliders.ySlider.refresh();
+        sliders.zSlider.refresh();
+
+
+      });
+      subs.push(sub);
+    });
+
+    return () => {
+      pane.current?.dispose();
+      subs.forEach((sub) => sub.unsubscribe());
+    };
+  }, []);
+
+  const ref = useRef<HTMLDivElement>(null);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        color: "var(--text-neutral-color)",
+        backgroundColor: "var(--node-background)",
+        borderBottom: "2px solid var(--border-color)",
+        padding: "14px 12px 12px",
+      }}
+    />
+  );
+};
 
 const VecUI = ({ node }: { node: Vec3 | Vec4 | Vec2 | Float | Int | Uint | Mat2 | Mat3 | Mat4 | IVec2 | IVec3 | IVec4 | UVec2 | UVec3 | UVec4 | BVec2 | BVec3 | BVec4 }) => {
   const pane = useRef<Pane>();
@@ -466,10 +612,10 @@ const MeshStandardMaterialUI = ({
       height: boundBox.height * (1 / currentScale),
     });
 
-    const subs = EditorEventEmitter.on("selectionChanged", ({nodes}) => {
-      if(nodes?.includes(node)){
+    const subs = EditorEventEmitter.on("selectionChanged", ({ nodes }) => {
+      if (nodes?.includes(node)) {
         experienceRef.current?.startRendering()
-      }else{
+      } else {
         experienceRef.current?.stopRendering()
       }
     })
@@ -645,7 +791,7 @@ function App() {
   const nodeWindowResolver = useNodeWindowResolver();
   const [saveState, setSaveState] = useState<SAVE_STATE_TYPE>("SAVED");
   useLayoutEffect(() => {
-    
+
 
     EditorEventEmitter.on("changed", () => {
       store.save()
@@ -794,7 +940,7 @@ function App() {
     });
 
     const searchState = { query: '' };
-    
+
     // Add search input using Tweakpane
     const searchInput = pane.current.addBinding(searchState, 'query', {
       label: 'Search Node',
@@ -835,7 +981,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "MaterialNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const constantNodesFolder = pane.current.addFolder({
@@ -847,7 +993,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "ConstantNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const mathNodesFolder = pane.current.addFolder({
@@ -859,7 +1005,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "MathNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const attributeNodesFolder = pane.current.addFolder({
@@ -871,7 +1017,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "AttributeNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const positionNodesFolder = pane.current.addFolder({
@@ -883,7 +1029,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "PositionNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const uniformNodesFolder = pane.current.addFolder({
@@ -895,7 +1041,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "UniformNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const varyingNodesFolder = pane.current.addFolder({
@@ -906,7 +1052,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "VaryingNode");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     const CustomNodesFolder = pane.current.addFolder({
@@ -926,7 +1072,7 @@ function App() {
         title: node,
       });
       makeButtonsDraggable(btn.element, node, "UtilityNodes");
-      nodeButtons.set(node, btn )
+      nodeButtons.set(node, btn)
     });
 
     btn.on("click", () => {

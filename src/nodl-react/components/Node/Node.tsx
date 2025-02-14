@@ -23,6 +23,7 @@ import { NodeActionProps, NodePortsProps, NodeProps } from "./Node.types";
 import { currentScale } from "../../../App";
 import { Pane } from "tweakpane";
 import { Node as NodeImpl } from "../../../nodl-core";
+import { EditorEventEmitter } from "../../../nodes/utils";
 
 const NodeName = ({ node }: { node: NodeImpl }) => {
   const [editLocalName, setEditLocalName] = React.useState({
@@ -198,6 +199,8 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const [minimize, setMinimize] = React.useState(false)
+
   React.useEffect(() => {
     if (!containerRef.current) return;
     const pane = new Pane({ container: containerRef.current });
@@ -244,22 +247,17 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
             </span>
           </div>
           <div css={nodeHeaderActionsStyles(isHovered || active)}>
+            <NodeAction color="#ffff44" onClick={() => {
+              setMinimize(m => !m)
+              EditorEventEmitter.emit("updateConnectionUI", {connections: node.connections})
+            }}/>
             <NodeAction color="#ff4444" onClick={handleRemoveNode} />
           </div>
         </div>
         {window ? (
-          <div css={nodeWindowWrapperStyles} children={window} />
+          <div  css={nodeWindowWrapperStyles(minimize)} children={window} />
         ) : undefined}
-        {/* <div
-          css={nodeContentWrapperStyles}
-          style={{
-            borderRadius: "0px",
-            paddingBottom: "0px",
-            paddingTop: "0px",
-          }}
-        >
-          <div ref={containerRef} style={{ minWidth: "80px" }} />
-        </div> */}
+        
         <div css={nodeContentWrapperStyles}>
           <NodePorts ports={Object.values(node.inputs)} />
           <NodePorts

@@ -35,6 +35,9 @@ const Connections = observer(() => {
   const ref = React.useRef<SVGSVGElement>(null);
   const { store } = React.useContext(StoreContext);
 
+  console.log("CONNECTIONS", "RERENDER");
+  
+
   const onClick = React.useCallback(
     (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
       if (ref.current === e.target) {

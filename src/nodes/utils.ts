@@ -40,7 +40,7 @@
 //   time,
 //   texture,
 // } from "three/tsl";
-import { Node } from "../nodl-core";
+import { Connection, Node } from "../nodl-core";
 
 export const createVarNameForNode = (node: Node) => {
   if (node.localName && node.localName.length > 0) {
@@ -150,13 +150,10 @@ export type SAVE_STATE_TYPE ="UNSAVED CHANGES" | "SAVING" | "SAVED"
 
 // Example usage:
 interface EditorEvents {
-  // nodeSelected: { nodeId: string; position: { x: number; y: number } };
-  // nodeDeleted: { nodeId: string };
-  // connectionCreated: { sourceId: string; targetId: string };
-  // Add more event types as needed
   changed: void;
   saveStateChanged : {state: SAVE_STATE_TYPE}
   selectionChanged: {nodes : Node[] | null}
+  updateConnectionUI : {connections: Connection<any>[]}
 }
 
 export const EditorEventEmitter = new EventEmitter<EditorEvents>();

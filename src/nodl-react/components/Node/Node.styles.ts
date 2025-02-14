@@ -59,6 +59,8 @@ export const nodeHeaderNameWrapperStyle = css`
 export const nodeHeaderActionsStyles = (active: boolean) => css`
   opacity: ${active ? 1 : 0};
   transition: opacity 0.15s;
+  display: flex;
+  alignItems: center;
 `;
 
 export const nodeActionStyles = (color: string) => css`
@@ -98,9 +100,9 @@ export const varInputStyles = css`
     border-bottom: 1px solid var(--text-neutral-color);
   }
 `;
-export const nodeWindowWrapperStyles = css`
+export const nodeWindowWrapperStyles = (hide = false) => css`
   position: relative;
-  display: flex;
+  display: ${hide ? "none" :"flex"};
   flex-direction: column;
 `;
 

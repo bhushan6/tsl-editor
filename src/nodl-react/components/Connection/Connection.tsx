@@ -8,6 +8,7 @@ import { StoreContext } from "../../stores/CircuitStore/CircuitStore";
 import { fromCanvasCartesianPoint } from "../../utils/coordinates/coordinates";
 import { ConnectionProps } from "./Connection.types";
 import { quadraticCurve } from "./Connection.utils";
+import { EditorEventEmitter } from "../../../nodes/utils";
 
 const INPUT_PORT_OFFSET_X = 12;
 const INPUT_PORT_OFFSET_Y = 12;
@@ -30,6 +31,17 @@ export const Connection = observer(
       ? store.portElements.get(output.id)
       : undefined;
     const inputElement = connection && store.portElements.get(connection.to.id);
+
+    const [refresh, setRefresh] = React.useState(false)
+
+    React.useEffect(() => {
+      const unsubs = EditorEventEmitter.on("updateConnectionUI", ({connections}) => {
+        if(connection && connections.includes(connection)){
+          setRefresh(r => !r)
+        }
+      })
+      return unsubs
+    }, [])
 
     React.useEffect(() => {
       if (outputElement && inputElement) {
@@ -83,7 +95,7 @@ export const Connection = observer(
           }
         });
       }
-    }, [outputElement, inputElement]);
+    }, [outputElement, inputElement, refresh]);
 
     React.useEffect(() => {
       if (output && outputElement) {

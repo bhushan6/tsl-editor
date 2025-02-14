@@ -332,6 +332,7 @@ const MathOperatorUI = ({ node }: { node: Mul }) => {
       })
 
       sliders.zSlider.on("change", (e) => {
+
         node.setValue(key, { value: { x: initValues[key].x, y: initValues[key].y, z: e.value }, type: binding.value })
       })
 
@@ -345,8 +346,6 @@ const MathOperatorUI = ({ node }: { node: Mul }) => {
         if (!node.inputs[key]?.connected) {
           const currentValue = node.inputs[key].getValue()()
           if (isNaN(currentValue)) {
-            console.log({ idasda: currentValue.value });
-
             if (currentValue.nodeType === "vec2") {
               initValues[key].x = currentValue.value.x
               initValues[key].y = currentValue.value.y
@@ -369,14 +368,6 @@ const MathOperatorUI = ({ node }: { node: Mul }) => {
           return;
         }
         enableUI({ binding, sliders }, true)
-        initValues[key].x = 0
-        initValues[key].y = 0
-        initValues[key].z = 0
-        sliders.xSlider.refresh();
-        sliders.ySlider.refresh();
-        sliders.zSlider.refresh();
-
-
       });
       subs.push(sub);
     });

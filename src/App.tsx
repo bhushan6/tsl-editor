@@ -601,7 +601,15 @@ const MeshStandardMaterialUI = ({
     experienceRef.current = new Experience(canvasRef.current, {
       width: boundBox.width * (1 / currentScale),
       height: boundBox.height * (1 / currentScale),
-    });
+    }, uiContainer.current || undefined);
+    const sizeObserver = new ResizeObserver(() => {
+      EditorEventEmitter.emit("updateConnectionUI", {connections: node.connections})
+    })
+
+    if(uiContainer.current){
+      sizeObserver.observe(uiContainer.current)
+    }
+
 
     const subs = EditorEventEmitter.on("selectionChanged", ({ nodes }) => {
       if (nodes?.includes(node)) {
@@ -611,7 +619,11 @@ const MeshStandardMaterialUI = ({
       }
     })
 
-    return () => subs();
+    return () => {
+      subs();
+      experienceRef.current?.dispose();
+      sizeObserver.disconnect()
+    }
   }, []);
 
   useEffect(() => {
@@ -632,6 +644,7 @@ const MeshStandardMaterialUI = ({
   }, []);
 
   const btnContainer = useRef<HTMLDivElement>(null);
+  const uiContainer = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!btnContainer.current) return;
@@ -769,7 +782,8 @@ const MeshStandardMaterialUI = ({
           backgroundColor: "var(--node-background)",
         }}
       />
-      <div ref={btnContainer}></div>
+      <div ref={uiContainer}  />
+      <div ref={btnContainer}/>
     </>
   );
 };
@@ -793,16 +807,6 @@ function App() {
     })
 
     store.loadFromJson();
-
-    // const t = setInterval(() => {
-    //   nodes.forEach(([node], i) => {
-    //     let toggleVisibility = node.visible ? store.hideNode : store.unHideNode
-
-    //     if(node.name !== "MeshStandardMaterialNode" && i % 2 === 0){
-    //       node.visible ? store.hideNode(node.id) : store.unHideNode(node.id)
-    //     }
-    //   })
-    // }, 3000)
 
     return () => {
       EditorEventEmitter.removeAllListeners("changed");

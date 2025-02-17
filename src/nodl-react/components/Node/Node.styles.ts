@@ -4,7 +4,7 @@ import { NODE_WIDTH } from "../../constants";
 
 export const NODE_CONTENT_PADDING = 12;
 
-export const nodeWrapperStyles = (active: boolean) => css`
+export const nodeWrapperStyles = (active: boolean, dragging: boolean) => css`
   --node-background: var(--panel-background);
 
   position: absolute;
@@ -17,13 +17,14 @@ export const nodeWrapperStyles = (active: boolean) => css`
   border-radius: 12px;
   transition: box-shadow 0.15s;
   font-feature-settings: "ss02" 1;
-
+  box-shadow: 0 0px 20px rgba(0, 0, 0, 0.33);
+  cursor:  ${dragging ? "grabbing" : "default"};
   :focus {
     outline: none;
   }
 
   :active {
-    box-shadow: ${active ? "0 0px 20px rgba(0, 0, 0, 0.33)" : ""};
+    box-shadow: 0 0px 20px rgba(0, 0, 0, 0.53);
   }
 `;
 

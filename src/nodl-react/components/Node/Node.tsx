@@ -197,6 +197,7 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
   const position = store.nodePositions.get(node.id) || { x: 0, y: 0 };
 
   const [minimize, setMinimize] = React.useState(false)
+  const [dragging, setDragging] = React.useState(false)
 
   return (
     <Draggable
@@ -206,11 +207,13 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
         position.y
       )}
       onDrag={handleOnDrag}
+      onStart={() => setDragging(true)}
+      onStop={() => setDragging(false)}
       handle=".handle"
     >
       <div
         ref={ref}
-        css={nodeWrapperStyles(active)}
+        css={nodeWrapperStyles(active, dragging)}
         onClick={handleOnClick}
         onFocus={handleOnFocus}
         onMouseEnter={onMouseEnter}

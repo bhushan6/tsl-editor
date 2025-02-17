@@ -230,10 +230,10 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
             </span>
           </div>
           <div css={nodeHeaderActionsStyles(isHovered || active)}>
-            <NodeAction color="#ffff44" onClick={() => {
+            {window && <NodeAction color="#ffff44" onClick={() => {
               setMinimize(m => !m)
               EditorEventEmitter.emit("updateConnectionUI", {connections: node.connections})
-            }}/>
+            }}/>}
             <NodeAction color="#ff4444" onClick={handleRemoveNode} />
           </div>
         </div>

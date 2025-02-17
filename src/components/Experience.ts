@@ -520,6 +520,13 @@ export class Experience {
     this._controls.target.y = 0;
     this._controls.target.z = 0;
     this._controls.target.x = 0;
+    this._controls.addEventListener("change", () => {
+      if(!this._currentAnimationFrame) this._renderer.render(this._scene, this._camera);
+    })
+    this._controls.domElement?.addEventListener("wheel", (e) => {
+      e.stopImmediatePropagation();
+      // e.stopPropagation()
+    })
 
     window.addEventListener("resize", this.onWindowResize);
 

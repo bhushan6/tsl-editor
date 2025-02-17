@@ -53,6 +53,7 @@ import { createCustomNode } from "./nodes/CustomNode";
 import { Fn } from "three/tsl";
 import { UtilityNodes } from "./nodes/UtilityNodes";
 import { VaryingNode } from "./nodes/VaryingNode";
+import { MAX_ZOOM, MIN_ZOOM } from "./nodl-react/constants";
 hljs.registerLanguage("javascript", javascript);
 
 const CustomNodes: { [key: string]: Node } = {
@@ -837,7 +838,8 @@ function App() {
       const direction = Math.sign(e.deltaY);
       const zoom = 0.01;
       currentScale -= zoom * direction;
-      currentScale = clamp(currentScale, 0.1, 5);
+      currentScale = clamp(currentScale, MIN_ZOOM, MAX_ZOOM);
+      
       nodeCanvasEle.style.transformOrigin = "center";
       nodeCanvasEle.style.transform = `scale(${currentScale}) translate(${currentTranslate.x}px, ${currentTranslate.y}px)`;
     };
@@ -1211,7 +1213,6 @@ function App() {
 
             const x = ((e.clientX - boundingRect.left) / currentScale) - currentTranslate.x;
             const y = ((e.clientY - boundingRect.top) / currentScale) - currentTranslate.y;
-            console.log({ currentScale });
 
             const pool = pools[poolName];
             if (!pool) return;

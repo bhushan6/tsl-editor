@@ -36,7 +36,7 @@ import {
 import { PositionNodes } from "./nodes/PositionNodes";
 import { toCartesianPoint } from "./nodl-react/utils/coordinates/coordinates";
 import { Subscription } from "rxjs";
-import {  isOperatorNode, MathNodes } from "./nodes/MathNodes";
+import { isOperatorNode, MathNodes } from "./nodes/MathNodes";
 import { AttributeNodes, UV } from "./nodes/AttributeNodes";
 import {
   FloatUniform,
@@ -603,10 +603,10 @@ const MeshStandardMaterialUI = ({
       height: boundBox.height * (1 / currentScale),
     }, uiContainer.current || undefined);
     const sizeObserver = new ResizeObserver(() => {
-      EditorEventEmitter.emit("updateConnectionUI", {connections: node.connections})
+      EditorEventEmitter.emit("updateConnectionUI", { connections: node.connections })
     })
 
-    if(uiContainer.current){
+    if (uiContainer.current) {
       sizeObserver.observe(uiContainer.current)
     }
 
@@ -782,8 +782,8 @@ const MeshStandardMaterialUI = ({
           backgroundColor: "var(--node-background)",
         }}
       />
-      <div ref={uiContainer}  />
-      <div ref={btnContainer}/>
+      <div ref={uiContainer} />
+      <div ref={btnContainer} />
     </>
   );
 };
@@ -1208,8 +1208,11 @@ function App() {
 
             const boundingRect = containerBound;
 
-            const x = e.clientX - boundingRect.left;
-            const y = e.clientY - boundingRect.top;
+
+            const x = ((e.clientX - boundingRect.left) / currentScale) - currentTranslate.x;
+            const y = ((e.clientY - boundingRect.top) / currentScale) - currentTranslate.y;
+            console.log({ currentScale });
+
             const pool = pools[poolName];
             if (!pool) return;
             const node = pool[name];
@@ -1219,7 +1222,7 @@ function App() {
             store.setNodes([
               [
                 nodeInstance,
-                toCartesianPoint(boundingRect.width, boundingRect.height, x, y),
+                toCartesianPoint(boundingRect.width / currentScale, boundingRect.height / currentScale, x, y),
               ],
             ]);
           }}

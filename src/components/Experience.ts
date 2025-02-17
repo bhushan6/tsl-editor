@@ -209,7 +209,6 @@ class GeometryUI {
   private geometryFolder: any;
   private parametersFolder: any;
   private materialFolder: any;
-
   constructor(
     private experience: Experience,
     containerElement?: HTMLElement
@@ -223,7 +222,30 @@ class GeometryUI {
     this.setupGeometryTypeControl();
     this.setupMaterialControls();
     this.setupParametersFolder();
+    // this.setupRenderingTypeControl()
+    // this/
   }
+
+  private setupRenderingTypeControl () {
+    const types = this.experience.getAvailableRenderingType()
+    const renderingOptionFolder = this.pane.addFolder({
+      title: 'Rendering Type',
+    });
+    renderingOptionFolder.addBinding(
+      {
+        type: types[0]
+      },
+      'type',
+      {
+        options: types.reduce((acc, type) => {
+          acc[type] = type;
+          return acc;
+        }, {} as Record<string, string>)
+      }
+    ).on('change', (ev) => {
+      this.experience.updateRenderingType(ev.value)
+    });
+  } 
 
   private setupGeometryTypeControl() {
     const types = this.experience.getAvailableGeometryTypes();
@@ -628,6 +650,18 @@ export class Experience {
     return this._geometryManager?.getCurrentParams() ?? null;
   }
 
+  private _currentRenderingType: "Default"| "On Demand" = "Default"
+
+  public getCurrentRenderingType = () => this._currentRenderingType
+
+  public getAvailableRenderingType(): ["Default", "On Demand"] {
+    return ["Default", "On Demand"]
+  }
+
+  public updateRenderingType(type: "Default"| "On Demand") {
+    this._currentRenderingType = type
+  }
+
   // Method to get default parameters for a geometry type
   public getGeometryDefaultParams(type: GeometryType) {
     return this._geometryManager?.getDefaultParams(type) ?? null;
@@ -668,9 +702,10 @@ export class Experience {
   };
 
   public startRendering() {
-    if (this._currentAnimationFrame === null) {
-      this.animate();
+    if (this._currentAnimationFrame) {
+      this.stopRendering
     }
+    this.animate();
   }
 
   public stopRendering() {

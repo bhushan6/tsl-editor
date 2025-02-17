@@ -19,7 +19,7 @@ export const toCartesianPoint = (width: number, height: number, x: number, y: nu
 };
 
 /** Resolves a cartesian coordinate point to an absolute coordinate, relative to the canvas size */
-export const fromCanvasCartesianPoint = (x: number, y: number) => fromCartesianPoint(CANVAS_SIZE, CANVAS_SIZE, x, y);
+export const fromCanvasCartesianPoint = (x: number, y: number) => fromCartesianPoint(CANVAS_SIZE , CANVAS_SIZE, x, y);
 
 /** Resolves an absolute coordinate point to a cartesian coordinate, relative to the canvas size */
 export const toCanvasCartesianPoint = (x: number, y: number) => toCartesianPoint(CANVAS_SIZE, CANVAS_SIZE, x, y);

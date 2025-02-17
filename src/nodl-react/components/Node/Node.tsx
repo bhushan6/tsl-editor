@@ -190,30 +190,13 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
 
   const handleRemoveNode = React.useCallback(() => {
     node.dispose();
-
     store.removeNode(node.id);
   }, [node]);
 
   const active = store.selectedNodes?.indexOf(node) !== -1;
   const position = store.nodePositions.get(node.id) || { x: 0, y: 0 };
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-
   const [minimize, setMinimize] = React.useState(false)
-
-  React.useEffect(() => {
-    if (!containerRef.current) return;
-    const pane = new Pane({ container: containerRef.current });
-    const btn = pane.addButton({
-      title: "Add Node",
-    });
-
-    btn.on("click", () => {});
-
-    return () => {
-      pane.dispose();
-    };
-  }, []);
 
   return (
     <Draggable

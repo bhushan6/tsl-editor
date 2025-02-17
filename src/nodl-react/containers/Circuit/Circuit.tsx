@@ -93,8 +93,9 @@ export const Circuit = observer(
           const bounds = {
             x,
             y,
-            width: width + e.movementX,
-            height: height + e.movementY,
+
+            width: width + (e.movementX),
+            height: height + ((e.movementY)),
           };
 
           props.store.setSelectionBounds(bounds);

@@ -66,9 +66,15 @@ function App() {
     const y = ((e.clientY - boundingRect.top) / store._editorTransformation.scale) - store._editorTransformation.translation.y;
 
     const pool = nodesPool[poolName];
-    if (!pool) return;
+    if (!pool) {
+      console.warn(`Pool  with ${poolName} name does not exist in nodesPool`)
+      return
+    };
     const node = pool[name];
-    if (!node) return;
+    if (!node) {
+      console.warn(`Node  with ${name} name does not exist in ${poolName}`)
+      return;
+    };
     const nodeInstance = new node();
 
     store.setNodes([

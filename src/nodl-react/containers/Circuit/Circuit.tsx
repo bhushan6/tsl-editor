@@ -15,7 +15,6 @@ import {
   circuitSelectionStyles,
 } from "./Circuit.styles";
 import { CircuitProps, NodeWindowResolver } from "./Circuit.types";
-import { currentScale } from "../../../App";
 
 const Nodes = observer(
   ({ windowResolver }: { windowResolver?: NodeWindowResolver }) => {
@@ -35,8 +34,6 @@ const Connections = observer(() => {
   const ref = React.useRef<SVGSVGElement>(null);
   const { store } = React.useContext(StoreContext);
 
-  console.log("CONNECTIONS", "RERENDER");
-  
 
   const onClick = React.useCallback(
     (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
@@ -82,8 +79,8 @@ export const Circuit = observer(
       (e: React.MouseEvent<HTMLDivElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
 
-        const x = ((e.nativeEvent.clientX - rect.left) * 1) / currentScale;
-        const y = ((e.nativeEvent.clientY - rect.top) * 1) / currentScale;
+        const x = ((e.nativeEvent.clientX - rect.left) * 1) / props.store._editorTransformation.scale;
+        const y = ((e.nativeEvent.clientY - rect.top) * 1) / props.store._editorTransformation.scale;
 
         props.store.setMousePosition({ x, y });
 

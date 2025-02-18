@@ -44,6 +44,8 @@ export class CircuitStore {
   private _saveHandle: number | null = null;
   private _unsavedChanges = false;
 
+  private _isShiftPressed = false
+
   constructor() {
     makeAutoObservable(this);
 
@@ -57,6 +59,12 @@ export class CircuitStore {
         return '';
       }
     });
+
+    const checkIfShiftPressed = (e: KeyboardEvent) => {
+      this._isShiftPressed = e.shiftKey
+    }
+    window.addEventListener("keydown", checkIfShiftPressed)
+    window.addEventListener("keyup", checkIfShiftPressed)
   }
 
   /** All associated connections */
@@ -169,7 +177,12 @@ export class CircuitStore {
 
   /** Selects the given nodes */
   public selectNodes(nodes: Node[]): void {
-    this.selectedNodes = nodes;
+    if(this._isShiftPressed){
+      this.selectedNodes = [...this.selectedNodes, ...nodes]
+    }else {
+      
+      this.selectedNodes = nodes;
+    }
     EditorEventEmitter.emit("selectionChanged", {nodes: nodes})
   }
 

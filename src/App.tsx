@@ -22,18 +22,13 @@ function App() {
   const [saveState, setSaveState] = useState<SAVE_STATE_TYPE>("SAVED");
 
   useLayoutEffect(() => {
-
-
     EditorEventEmitter.on("changed", () => {
       store.save()
     })
-
     EditorEventEmitter.on("saveStateChanged", (data) => {
       setSaveState(data.state)
     })
-
     store.loadFromJson();
-
     return () => {
       EditorEventEmitter.removeAllListeners("changed");
       EditorEventEmitter.removeAllListeners("saveStateChanged");
@@ -61,8 +56,6 @@ function App() {
     e.preventDefault();
     if (!containerBound) return;
 
-
-
     const [name, poolName] = e.dataTransfer
       .getData("text/plain")
       .split("-");
@@ -88,6 +81,26 @@ function App() {
 
   const onDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+  }
+
+  const onCustomNodeCreateClick = () => {
+    const name = nameInputRef.current?.value
+    const code = nodeCodeInputRef.current?.value
+
+    if (!name || !code) return
+    try {
+      const Node = createCustomNode(code, name)
+
+      store.setNodes([
+        [
+          new Node(),
+          { x: 0, y: 0 },
+        ],
+      ]);
+      setCustomNodeForm(false)
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   return (
@@ -128,25 +141,7 @@ function App() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  const name = nameInputRef.current?.value
-                  const code = nodeCodeInputRef.current?.value
-
-                  if (!name || !code) return
-                  try {
-                    const Node = createCustomNode(code, name)
-
-                    store.setNodes([
-                      [
-                        new Node(),
-                        { x: 0, y: 0 },
-                      ],
-                    ]);
-                    setCustomNodeForm(false)
-                  } catch (e) {
-                    console.log(e)
-                  }
-                }}
+                onClick={onCustomNodeCreateClick}
                 className="button button-primary">
                 Add
               </button>

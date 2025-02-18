@@ -816,6 +816,8 @@ function App() {
     };
   }, []);
 
+  const saveEditorSettings = () => localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
+
   useEffect(() => {
     const nodeCanvas = document.getElementsByClassName("canvas")[0];
 
@@ -833,15 +835,19 @@ function App() {
     nodeCanvasEle.style.transformOrigin = "center";
     nodeCanvasEle.style.transform = `scale(${currentScale}) translate(${currentTranslate.x}px, ${currentTranslate.y}px)`;
 
+    let timeoutId: null | number = null
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const direction = Math.sign(e.deltaY);
       const zoom = 0.01;
       currentScale -= zoom * direction;
       currentScale = clamp(currentScale, MIN_ZOOM, MAX_ZOOM);
-      
+
       nodeCanvasEle.style.transformOrigin = "center";
       nodeCanvasEle.style.transform = `scale(${currentScale}) translate(${currentTranslate.x}px, ${currentTranslate.y}px)`;
+      timeoutId && clearTimeout(timeoutId)
+      timeoutId = setTimeout(saveEditorSettings, 500)
     };
 
     const onContextMenu = (e: MouseEvent) => {
@@ -887,6 +893,8 @@ function App() {
         currentTranslate.x += deltaX;
         currentTranslate.y += deltaY;
         nodeCanvasEle.style.transform = `scale(${currentScale}) translate(${currentTranslate.x}px, ${currentTranslate.y}px)`;
+        timeoutId && clearTimeout(timeoutId)
+        timeoutId = setTimeout(saveEditorSettings, 500)
       }
     };
 
@@ -909,6 +917,7 @@ function App() {
       nodeCanvasEle.removeEventListener("mouseleave", onMouseLeave);
       nodeCanvasEle.removeEventListener("blur", onBlur);
       nodeCanvasEle.removeEventListener("mousemove", onMouseMove);
+      timeoutId && clearTimeout(timeoutId)
     };
   }, []);
 

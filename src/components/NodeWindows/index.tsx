@@ -55,7 +55,7 @@ export const useNodeWindowResolver = () => {
       } else if (isOperatorNode(node)) {
         return <MathOperatorWindow node={node} />
       } else {
-        return <></>
+        return undefined
       }
     }, []);
   };

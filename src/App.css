@@ -29,7 +29,13 @@
   color: var(--text-light-color);
   font-family: "Inter", sans-serif;
   overflow: auto;
+  pointer-events: none;
 }
+
+.sidebar-container > * {
+  pointer-events: auto;
+}
+
 
 /* Circuit container */
 .circuit-container {

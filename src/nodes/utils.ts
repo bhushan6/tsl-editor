@@ -154,6 +154,7 @@ interface EditorEvents {
   saveStateChanged : {state: SAVE_STATE_TYPE}
   selectionChanged: {nodes : Node[] | null}
   updateConnectionUI : {connections: Connection<any>[]}
+  forceRender: void
 }
 
 export const EditorEventEmitter = new EventEmitter<EditorEvents>();

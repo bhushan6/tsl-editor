@@ -2,6 +2,7 @@ import { Pane } from "tweakpane";
 import { FloatUniform, Vec2Uniform, Vec3Uniform } from "../../nodes/UniformNodes";
 import { useEffect, useRef } from "react";
 import WindowWrapper from "./WindowWrapper";
+import { EditorEventEmitter } from "../../nodes/utils";
 
 export const UniformWinodw = ({
     node,
@@ -32,14 +33,16 @@ export const UniformWinodw = ({
         pane.current = new Pane({ container: ref.current, expanded: true });
 
         Object.keys(initialInputs).forEach((key) => {
-            const binding = pane.current
+            pane.current
                 ?.addBinding(initialInputs, key)
                 .on("change", (e) => {
                     if (node instanceof FloatUniform) {
                         node._value.value = e.value || 0;
+
                     } else {
                         node._value[key] = e.value || 0;
                     }
+                    EditorEventEmitter.emit("forceRender")
                 });
         });
 

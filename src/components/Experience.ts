@@ -701,9 +701,11 @@ export class Experience {
 
   private _currentAnimationFrame: number | null = null;
 
+  public render = () => this._renderer.render(this._scene, this._camera);
+
   private animate = () => {
     this._controls.update();
-    this._renderer.render(this._scene, this._camera);
+    this.render();
     this._currentAnimationFrame = requestAnimationFrame(this.animate);
   };
 

@@ -986,15 +986,10 @@ export const useKeyboardActions = (store: CircuitStore) => {
   const actions: KeyboardAction[] = React.useMemo(
     () => [
       /** Remove Nodes */
-      // {
-      //   key: KeyboardKey.Delete,
-      //   callback: removeNodes,
-      // },
-      // {
-      //   key: KeyboardKey.Backspace,
-      //   callback: removeNodes,
-      // },
-
+      {
+        key: KeyboardKey.Delete,
+        callback: removeNodes,
+      },
       /** Select Nodes */
       {
         modifier: "metaKey",
@@ -1021,6 +1016,7 @@ export const useKeyboardActions = (store: CircuitStore) => {
       for (const action of actions) {
         if (action.key === e.key) {
           if (action.modifier && !e[action.modifier]) continue;
+          e.preventDefault()
           action.callback(e);
         }
       }

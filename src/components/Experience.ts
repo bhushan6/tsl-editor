@@ -525,7 +525,6 @@ export class Experience {
     })
     this._controls.domElement?.addEventListener("wheel", (e) => {
       e.stopImmediatePropagation();
-      // e.stopPropagation()
     })
 
     window.addEventListener("resize", this.onWindowResize);

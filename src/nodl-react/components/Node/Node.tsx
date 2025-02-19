@@ -20,8 +20,6 @@ import {
   varInputStyles,
 } from "./Node.styles";
 import { NodeActionProps, NodePortsProps, NodeProps } from "./Node.types";
-import { currentScale } from "../../../App";
-import { Pane } from "tweakpane";
 import { Node as NodeImpl } from "../../../nodl-core";
 import { EditorEventEmitter } from "../../../nodes/utils";
 
@@ -178,10 +176,10 @@ export const Node = observer(({ node, actions, window }: NodeProps) => {
         store.setNodePosition(selectedNode.id, {
           x:
             (store.nodePositions.get(selectedNode.id)?.x || 0) +
-            (deltaX * 1) / currentScale,
+            (deltaX * 1) / store._editorTransformation.scale,
           y:
             (store.nodePositions.get(selectedNode.id)?.y || 0) +
-            -((deltaY * 1) / currentScale),
+            -((deltaY * 1) / store._editorTransformation.scale),
         });
       }
     },

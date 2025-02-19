@@ -12,9 +12,55 @@ import {
   NodeWithPosition,
   StoreProviderValue,
 } from "./CircuitStore.types";
-import { currentScale, currentTranslate, getNodeByName } from "../../../App";
 import { createCustomNode } from "../../../nodes/CustomNode";
 import { EditorEventEmitter } from "../../../nodes/utils";
+import { nodesPool } from "../../../nodes";
+
+export const getNodeByName = (name: string) => {
+  const poolsValues = Object.values(nodesPool)
+  
+  for (let index = 0; index < poolsValues.length; index++) {
+    const pool = poolsValues[index];
+    const poolKeys = Object.keys(pool);
+    for (let index = 0; index < poolKeys.length; index++) {
+      const elementName = poolKeys[index];
+      const element = pool[elementName];
+      if (elementName === name) {
+        return element;
+      }
+    }
+  }
+  return null;
+}
+
+type EditorTransformationType = {
+  scale: number;
+  translation: { x: number, y: number }
+}
+
+const getSavedEditorTranslation = (): EditorTransformationType => {
+  const settings = localStorage.getItem("editor-settings")
+  if (!settings) return {
+    scale: 1,
+    translation: { x: 0, y: 0 }
+  }
+  try {
+    const parsedSettings = JSON.parse(settings);
+    if (!isNaN(parsedSettings.scale) && parsedSettings.translation && !isNaN(parsedSettings.translation.x) && !isNaN(parsedSettings.translation.y)) {
+      return parsedSettings as EditorTransformationType
+    } else {
+      return {
+        scale: 1,
+        translation: { x: 0, y: 0 }
+      }
+    }
+  } catch (error) {
+    return {
+      scale: 1,
+      translation: { x: 0, y: 0 }
+    }
+  }
+}
 
 export class CircuitStore {
   /** Associated Nodes */
@@ -46,6 +92,11 @@ export class CircuitStore {
 
   private _isShiftPressed = false
 
+  public _editorTransformation = getSavedEditorTranslation();
+
+  public saveEditorTransformation = () => localStorage.setItem("editor-settings", JSON.stringify(this._editorTransformation))
+
+
   constructor() {
     makeAutoObservable(this);
 
@@ -76,12 +127,12 @@ export class CircuitStore {
 
   /** Sets the associated nodes */
   public setNodes(nodesWithPosition: NodeWithPosition[]) {
-    EditorEventEmitter.emit("saveStateChanged", {state: "UNSAVED CHANGES"})
+    EditorEventEmitter.emit("saveStateChanged", { state: "UNSAVED CHANGES" })
     for (const [node, position] of nodesWithPosition) {
-      if(node.visible){
+      if (node.visible) {
         this.nodes.push(node);
         this.nodePositions.set(node.id, position);
-      }else{
+      } else {
         this._hiddenNodes.set(node.id, node);
         this._hiddenNodesPosition.set(node.id, position)
       }
@@ -91,21 +142,21 @@ export class CircuitStore {
 
   public unHideNode(id: string) {
     const hiddenNode = this._hiddenNodes.get(id);
-    if(!hiddenNode) {
+    if (!hiddenNode) {
       console.warn(`Node with id: ${id} does not exist`);
-      
+
       return;
     };
 
     const position = this._hiddenNodesPosition.get(id)
-    if(!position) throw new Error(`${id} Node's position don't exist`)
+    if (!position) throw new Error(`${id} Node's position don't exist`)
 
     hiddenNode.visible = true
     this.setNodes([[hiddenNode, position]])
 
   }
 
-  public hideNode(id: string){
+  public hideNode(id: string) {
     let foundNode: Node | undefined;
     this.nodes = this.nodes.filter(node => {
       if (node.id === id) {
@@ -120,7 +171,7 @@ export class CircuitStore {
       return;
     }
     const nodePosition = this.nodePositions.get(id)
-    if(!nodePosition) throw new Error("Node position don't exist")
+    if (!nodePosition) throw new Error("Node position don't exist")
     this._hiddenNodesPosition.set(id, nodePosition)
     this._hiddenNodes.set(id, foundNode);
     foundNode.visible = false
@@ -130,7 +181,7 @@ export class CircuitStore {
 
   /** Removes a node from the store */
   public removeNode(nodeId: Node["id"]) {
-    EditorEventEmitter.emit("saveStateChanged", {state: "UNSAVED CHANGES"})
+    EditorEventEmitter.emit("saveStateChanged", { state: "UNSAVED CHANGES" })
     this.nodes = this.nodes.filter((node) => node.id !== nodeId);
     this.nodeElements.delete(nodeId);
     this.nodePositions.delete(nodeId);
@@ -177,13 +228,13 @@ export class CircuitStore {
 
   /** Selects the given nodes */
   public selectNodes(nodes: Node[]): void {
-    if(this._isShiftPressed){
+    if (this._isShiftPressed) {
       this.selectedNodes = [...this.selectedNodes, ...nodes]
-    }else {
-      
+    } else {
+
       this.selectedNodes = nodes;
     }
-    EditorEventEmitter.emit("selectionChanged", {nodes: nodes})
+    EditorEventEmitter.emit("selectionChanged", { nodes: nodes })
   }
 
   /** Sets the selection bounds */
@@ -231,14 +282,14 @@ export class CircuitStore {
     this.mousePosition = { x: 0, y: 0 };
 
     this.selectionBoundsDisposer();
-    
+
     // Clean up the idle callback if it exists
     if (this._saveHandle !== null) {
       window.cancelIdleCallback(this._saveHandle);
     }
-    
+
     // Remove the beforeunload listener
-    window.removeEventListener('beforeunload', () => {});
+    window.removeEventListener('beforeunload', () => { });
   }
 
   /** Automatically selects the nodes which are within the selection bounds */
@@ -283,9 +334,9 @@ export class CircuitStore {
   }
 
   private serialize = () => {
-    EditorEventEmitter.emit("saveStateChanged", {state: "SAVING"})
+    EditorEventEmitter.emit("saveStateChanged", { state: "SAVING" })
 
-    
+
     const serializedNodes: NodeSerialized[] = []
     this.nodes.forEach(node => {
       const pos = this.nodePositions.get(node.id)
@@ -293,15 +344,13 @@ export class CircuitStore {
       serializedNodes.push({ ...node.serialize(), position: { x: pos.x, y: pos.y } })
     })
     localStorage.setItem("nodes", JSON.stringify(serializedNodes))
-    localStorage.setItem("editor-settings", JSON.stringify({ currentScale, currentTranslate }))
-    
     this._unsavedChanges = false;
-    EditorEventEmitter.emit("saveStateChanged", {state: "SAVED"})
+    EditorEventEmitter.emit("saveStateChanged", { state: "SAVED" })
   }
 
   public save = () => {
     this._unsavedChanges = true;
-    
+
     // Cancel previous save if pending
     if (this._saveHandle !== null) {
       window.cancelIdleCallback(this._saveHandle);

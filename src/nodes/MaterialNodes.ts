@@ -1,7 +1,7 @@
 import { Input, schema, Node } from "../nodl-core";
 import { z } from "zod";
 
-import { positionLocal, vec4 } from "three/tsl";
+import { normalLocal, positionLocal, vec4 } from "three/tsl";
 
 export class MeshStandardMaterialNode extends Node {
   name = "MeshStandardMaterialNode";
@@ -15,6 +15,11 @@ export class MeshStandardMaterialNode extends Node {
       name: "positionNode",
       type: schema(z.any()),
       defaultValue: () => positionLocal
+    }),
+    normalNode: new Input({
+      name: "normalNode",
+      type: schema(z.any()),
+      defaultValue: () => normalLocal
     })
   };
 

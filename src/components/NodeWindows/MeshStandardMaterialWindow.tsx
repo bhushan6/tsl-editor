@@ -73,9 +73,15 @@ export const MeshStandardMaterialWindow = ({
       experienceRef.current?.updateNode("positionNode", positionNode);
     });
 
+    const normalNodeSubs = node.inputs.normalNode?.subscribe((value) => {
+      const positionNode = Fn(value)
+      experienceRef.current?.updateNode("normalNode", positionNode);
+    });
+
     return () => {
       colorNodeSubs.unsubscribe();
       positionNodeSubs.unsubscribe();
+      normalNodeSubs.unsubscribe()
     };
   }, []);
 

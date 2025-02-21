@@ -1,4 +1,4 @@
-import { Input, Output, schema, Node, NodeSerialized } from "../nodl-core";
+import { Input, Output, schema, Node } from "../nodl-core";
 import { z } from "zod";
 import {
   vec2,
@@ -20,82 +20,11 @@ import {
   bvec2,
   uvec4,
   uvec3,
-  uvec2,
-  uv,
-  positionLocal,
-  mul,
+  uvec2
 } from "three/tsl";
 
-import { combineLatest, map, of, BehaviorSubject } from "rxjs";
+import { combineLatest, map, BehaviorSubject } from "rxjs";
 import { createVarNameForNode } from "./utils";
-import { Observable } from 'rxjs';
-
-const foo = new Observable((subscriber) => {
-  console.log('Hello');
-  subscriber.next(() => color("#ff0ff"));
-  // subscriber.next(100); // "return" another value
-  // subscriber.next(200); // "return" yet another
-});
-
-const bar = of(0)
-
-
-bar.subscribe((x) => {
-  console.log(x);
-
-})
-
-bar
-
-
-
-console.log('before');
-foo.subscribe((x) => {
-  console.log(x);
-});
-console.log('after');
-
-// float.prototype.toJSON = function () {
-//   return  {
-//         type: "primiitive",
-//         value: this.x,
-//       };
-// };
-const f = mat4();
-const u = uv(1);
-const p = positionLocal;
-const m = mul(p, p);
-const sf = f.toJSON();
-console.log(sf);
-const f2 = mat4(sf.value);
-console.log(f2.toJSON());
-// console.log({
-//   type: f.type,
-//   nodeType: f.nodeType,
-//   valueType: f.valueType,
-//   value: f.value,
-// });
-// const f2 = mat4(f.value);
-// console.log(f2);
-
-// console.log({
-//   type: u.type,
-//   nodeType: u.nodeType,
-//   valueType: u.valueType,
-//   value: u.value,
-// });
-// console.log({
-//   type: p.type,
-//   nodeType: p.nodeType,
-//   valueType: p.valueType,
-//   value: p.value,
-// });
-// console.log({
-//   type: m.type,
-//   nodeType: m.nodeType,
-//   valueType: m.valueType,
-//   value: m.value,
-// });
 
 export class Float extends Node {
   name = "Float";
@@ -104,12 +33,6 @@ export class Float extends Node {
       name: "A",
       type: schema(z.any()),
       defaultValue: () => 0,
-      // serialize: () => {
-      //   return {
-      //     type: "primiitive",
-      //     value: this.inputs.a.getValue()(),
-      //   }
-      // }
     }),
   };
   outputs = {
@@ -144,12 +67,6 @@ export class Int extends Node {
       name: "A",
       type: schema(z.any()),
       defaultValue: () => 0,
-      // serialize: () => {
-      //   return {
-      //     type: "primiitive",
-      //     value: this.inputs.a.getValue()(),
-      //   }
-      // }
     }),
   };
   outputs = {

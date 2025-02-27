@@ -54,6 +54,8 @@ function createOperatorNode(config: NodeConfig) {
   return class OperatorNode extends Node implements IOperatorNode {
     isOperator = true as const;
     name = config.name;
+
+    public operation =  config.operation
     
     inputs = Object.entries(config.inputs).reduce((acc, [key, inputConfig]) => {
       acc[key] = new Input({
@@ -90,7 +92,7 @@ function createOperatorNode(config: NodeConfig) {
         name: "Output",
         type: schema(z.any()),
         observable: combineLatest([...Object.values(this.inputs)]).pipe(
-          map((inputs) => evaluateInputs(inputs, config.operation))
+          map((inputs) => evaluateInputs(inputs, this.operation))
         ),
       }),
     };

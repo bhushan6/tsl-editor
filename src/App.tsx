@@ -175,7 +175,7 @@ function App() {
         <div className="save-button-container">
           <button
             className={`save-button ${saveState === "SAVING" ? "save-button--saving" : ""}`}
-            onClick={() => store.save()}
+            onClick={store.save}
             disabled={saveState === "SAVING"}
           >
             {saveState === "SAVING" ? (

@@ -15,9 +15,11 @@ import {
 import { createCustomNode } from "../../../nodes/CustomNode";
 import { EditorEventEmitter } from "../../../nodes/utils";
 import { nodesPool } from "../../../nodes";
+import { groupGivenNodes } from "../../../nodes/GroupNode";
 
 export const getNodeByName = (name: string) => {
   const poolsValues = Object.values(nodesPool)
+  console.log(nodesPool, name);
   
   for (let index = 0; index < poolsValues.length; index++) {
     const pool = poolsValues[index];

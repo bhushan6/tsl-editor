@@ -35,13 +35,16 @@ export class Float extends Node {
       defaultValue: () => 0,
     }),
   };
+
+  public operation = float
+
   outputs = {
     value: new Output({
       name: "Value",
       type: schema(z.any()),
       observable: combineLatest([this.inputs.a]).pipe(
         map((inputs) => {
-          return () => float(inputs[0]());
+          return () => this.operation(inputs[0]());
         })
       ),
     }),

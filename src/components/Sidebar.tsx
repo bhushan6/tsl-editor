@@ -8,6 +8,7 @@ import { PositionNodes } from "../nodes/PositionNodes";
 import { UniformNodes } from "../nodes/UniformNodes";
 import { VaryingNode } from "three/webgpu";
 import { UtilityNodes } from "../nodes/UtilityNodes";
+import { LogicNodes } from "../nodes/LogicNodes";
 
 export const Sidebar = ({setCustomNodeForm}: {setCustomNodeForm:  React.Dispatch<React.SetStateAction<boolean>>}) => {
     const pane = useRef<Pane>(null!);
@@ -89,6 +90,18 @@ export const Sidebar = ({setCustomNodeForm}: {setCustomNodeForm:  React.Dispatch
           title: node,
         });
         makeButtonsDraggable(btn.element, node, "MathNodes");
+        nodeButtons.set(node, btn)
+      });
+  
+      const logicNodesFolder = pane.current.addFolder({
+        title: "Logic",
+      });
+  
+      Object.keys(LogicNodes).forEach((node) => {
+        const btn = logicNodesFolder.addButton({
+          title: node,
+        });
+        makeButtonsDraggable(btn.element, node, "LogicNodes");
         nodeButtons.set(node, btn)
       });
   
